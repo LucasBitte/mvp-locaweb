@@ -13,13 +13,18 @@ surrogate key (`MD5(COALESCE(campo::text,''))`) e os nomes de tabela (`dim_tempo
 ## Estrutura
 
 ```
-db/         DDL versionado do modelo dimensional (migrations) e dados de referência (seeds)
-etl/        Transformação: tabela bruta de chamados -> dimensões + fato
-app/api/    Backend FastAPI, consulta o modelo dimensional
-app/web/    Frontend React (Vite), consome a API
-tests/      Testes de ETL e API
+notebooks/    Notebooks originais do projeto (forecast Prophet, risco XGBoost, clustering K-Means)
+db/           DDL versionado do modelo dimensional (migrations) e dados de referência (seeds)
+etl/          Transformação: tabela bruta de chamados -> dimensões + fato
+app/api/      Backend FastAPI, consulta o modelo dimensional
+app/web/      Frontend React (Vite), consome a API
+tests/        Testes de ETL e API
 docs/design/  Mockup de referência do dashboard (aiops_dashboard_redesign.html)
 ```
+
+`notebooks/` contém o trabalho de modelagem original (previsão de volume, risco de
+SLA, clustering) que fundamenta este pipeline — as saídas desses modelos são a fonte
+de vários painéis do dashboard (ver `docs/design/aiops_dashboard_redesign.html`).
 
 ## Status
 

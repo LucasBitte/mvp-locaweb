@@ -20,6 +20,7 @@ data/
 *.parquet
 *.csv
 saida_forecast/
+.ipynb_checkpoints/
 
 # Editor / SO
 .vscode/
