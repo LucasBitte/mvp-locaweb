@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-app = FastAPI(title="FIAP Incidentes Dashboard API")
+app = FastAPI(title="MVP Locaweb — AIOps Incidentes API")
 
 origins = os.getenv("API_CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
