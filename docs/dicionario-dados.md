@@ -255,6 +255,15 @@ do XGBoost se o SHAP não estiver disponível), recarregada por completo a
 cada execução. Colunas: `importancia_sk` (PK), `modelo_versao`,
 `data_execucao`, `feature`, `importance_pct`, `rank`.
 
+### `ml.fct_importancia_conceito`
+Mesma importância, agrupada por **conceito de negócio** (ex: "Dia da
+semana", "Categoria e triagem") em vez de coluna crua — é essa granularidade
+que o painel "Fatores" do mockup mostra (`ml.fct_importancia_feature` é a
+referência técnica por coluna). Só é populada quando o SHAP roda de verdade
+(fica vazia no fallback por gain do XGBoost, que não tem agrupamento por
+conceito). Colunas: `importancia_conceito_sk` (PK), `modelo_versao`,
+`data_execucao`, `conceito`, `n_colunas`, `importance_pct`, `rank`.
+
 ### `ml.fct_risco_incidente`
 Score de risco de violação de SLA por incidente (XGBoost calibrado),
 cobertura total de `dw.fct_incidentes` (41.441 linhas), recarregada por

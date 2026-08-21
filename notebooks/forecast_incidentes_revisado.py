@@ -11,7 +11,7 @@
  FONTE = 'sql' para usar o RDS. Nenhum caminho absoluto de Windows e usado.
 
  Parquets de ingestao centralizados em data/raw/ml/ (raiz do projeto). Artefatos de saida
- (backtest, previsao, diagnostico) vao por padrao para data/ml/, sempre em parquet.
+ (backtest, previsao, diagnostico) vao por padrao para data/ml/prophet/, sempre em parquet.
 
  Requisitos: pandas, numpy, prophet, pyarrow. Toda saida e parquet: nenhuma imagem.
 =============================================================================================
@@ -50,7 +50,7 @@ except ModuleNotFoundError as e:  # dependencia que nao esta em requirements.txt
 COL_DATA = "data_abertura"      # timestamp de abertura do incidente
 COL_VOLUME = "total_chamados"   # contador de incidentes por linha (NAO e sempre 1 — ver [MUDANCA 1])
 HORIZONTE = 7                   # D+1 .. D+7
-MODELO_ARTEFATO = "prophet"     # prefixo dos artefatos: <modelo>_<saida>.parquet
+MODELO_ARTEFATO = "prophet"     # nome da pasta de saida: data/ml/<modelo>/
 NIVEL_INTERVALO = 0.80          # explicito: o default do Prophet e 0.80, nao 0.95
 SEED = 42
 
@@ -111,7 +111,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"      # fallback de entrada
 DATA_IN_DIR = DATA_RAW_DIR / "ml"                 # entrada: parquets de ingestao (gold_ml)
-DATA_ML_DIR = PROJECT_ROOT / "data" / "ml"        # saida: artefatos do modelo, em parquet
+DATA_ML_DIR = PROJECT_ROOT / "data" / "ml" / MODELO_ARTEFATO  # saida: pasta propria do modelo
 
 #: Locais onde o parquet e procurado quando --caminho nao aponta para um arquivo existente.
 #: Evita depender do diretorio de onde o script/notebook foi disparado.
@@ -452,24 +452,25 @@ def acf_residuos(bt: pd.DataFrame, modelo: str, h: int = 1, max_lag: int = 7) ->
 # =======================================================================================
 
 def dados_diagnostico(serie: pd.DataFrame, bt: pd.DataFrame, modelo: str,
-                      destino: Path, prefixo: str = MODELO_ARTEFATO) -> list[Path]:
+                      destino: Path) -> list[Path]:
     """Grava os insumos dos diagnosticos em parquet e devolve os caminhos escritos.
 
-    Real vs previsto e residuos ja estao em <prefixo>_backtest_bruto.parquet (colunas
-    ds, h, y, yhat, erro), entao aqui ficam so os agregados que nao dao para derivar
-    sem repetir conta: a serie diaria, a ACF dos residuos e o resumo por horizonte.
+    Real vs previsto e residuos ja estao em backtest_bruto.parquet (colunas ds, h, y,
+    yhat, erro), entao aqui ficam so os agregados que nao dao para derivar sem repetir
+    conta: a serie diaria, a ACF dos residuos e o resumo por horizonte. `destino` e a
+    pasta do modelo (data/ml/prophet/), entao os arquivos nao precisam de prefixo.
     """
     d = bt[bt.modelo == modelo]
     escritos = []
 
     # Painel 1: serie diaria completa
-    caminho = destino / f"{prefixo}_serie_diaria.parquet"
+    caminho = destino / "serie_diaria.parquet"
     serie[["ds", "y", "dow"]].to_parquet(caminho, index=False)
     escritos.append(caminho)
 
     # Painel "ACF dos residuos D+1": autocorrelacao por lag
     acf = acf_residuos(bt, modelo)
-    caminho = destino / f"{prefixo}_acf_residuos.parquet"
+    caminho = destino / "acf_residuos.parquet"
     (pd.DataFrame({"lag": range(1, len(acf) + 1),
                    "autocorrelacao": acf.values,
                    "modelo": modelo, "horizonte": 1})
@@ -491,7 +492,7 @@ def dados_diagnostico(serie: pd.DataFrame, bt: pd.DataFrame, modelo: str,
                 .reset_index())
     resumo["nivel_nominal%"] = 100 * NIVEL_INTERVALO
     resumo["modelo"] = modelo
-    caminho = destino / f"{prefixo}_diagnostico_por_horizonte.parquet"
+    caminho = destino / "diagnostico_por_horizonte.parquet"
     resumo.to_parquet(caminho, index=False)
     escritos.append(caminho)
 
@@ -654,7 +655,7 @@ def main(argv: list[str] | None = None):
     bt["periodo"] = np.where(bt.origem <= fim_tuning, "tuning", "avaliacao_final")
     print(f"tuning ate {fim_tuning.date()} | avaliacao final depois disso "
           f"({bt[bt.periodo=='avaliacao_final'].origem.nunique()} origens)")
-    bt.to_parquet(out / f"{MODELO_ARTEFATO}_backtest_bruto.parquet")
+    bt.to_parquet(out / "backtest_bruto.parquet")
 
     # ---------------- metricas ----------------
     for per in ["tuning", "avaliacao_final"]:
@@ -667,7 +668,7 @@ def main(argv: list[str] | None = None):
     final = bt[bt.periodo == "avaliacao_final"]
     # Metricas da avaliacao final tambem viram parquet: e o que o BI le, sem reprocessar.
     (metricas_gerais(final).reset_index()
-        .to_parquet(out / f"{MODELO_ARTEFATO}_metricas_avaliacao_final.parquet", index=False))
+        .to_parquet(out / "metricas_avaliacao_final.parquet", index=False))
     print(f"\n{'='*88}\nERRO DO TOTAL DA SEMANA (soma D+1..D+7) — avaliacao final\n{'='*88}")
     print(erro_total_semanal(final).round(1).sort_values("MAE_semana").to_string())
 
@@ -707,7 +708,7 @@ def main(argv: list[str] | None = None):
     num = ["yhat", "yhat_lower", "yhat_upper"]
     print(f.assign(**{c: f[c].round(0) for c in num}).to_string(index=False))
     print(f"total previsto para a semana: {f.yhat.sum():.0f} chamados")
-    f.to_parquet(out / f"{MODELO_ARTEFATO}_forecast_d1_d7.parquet", index=False)
+    f.to_parquet(out / "forecast_d1_d7.parquet", index=False)
 
     if args.fonte == "sql":
         from etl.db import get_engine
@@ -718,9 +719,8 @@ def main(argv: list[str] | None = None):
 
     escritos = dados_diagnostico(serie, final, "prophet_regime", out)
     nomes = ", ".join(c.name for c in escritos)
-    print(f"\nArtefatos em: {out.resolve()}  ({MODELO_ARTEFATO}_backtest_bruto.parquet, "
-          f"{MODELO_ARTEFATO}_metricas_avaliacao_final.parquet, "
-          f"{MODELO_ARTEFATO}_forecast_d1_d7.parquet, {nomes})")
+    print(f"\nArtefatos em: {out.resolve()}  (backtest_bruto.parquet, "
+          f"metricas_avaliacao_final.parquet, forecast_d1_d7.parquet, {nomes})")
 
 
 def executar(caminho: str = "ml_forecast_dataset.parquet",
