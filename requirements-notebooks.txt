@@ -1,0 +1,9 @@
+-r requirements.txt
+jupyter
+nbconvert
+ipykernel
+matplotlib
+seaborn
+missingno
+holidays
+pyarrow
