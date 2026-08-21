@@ -28,7 +28,8 @@ de vários painéis do dashboard (ver `docs/design/aiops_dashboard_redesign.html
 
 ## Documentação
 
-- [docs/dicionario-dados.md](docs/dicionario-dados.md) — colunas de todas as tabelas (fonte + modelo dimensional)
+- [docs/resumo-projeto.md](docs/resumo-projeto.md) — estado atual do projeto (comece por aqui)
+- [docs/dicionario-dados.md](docs/dicionario-dados.md) — colunas de todas as tabelas (fonte, `dw` e `ml`)
 - [docs/schema-fonte-incidentes.md](docs/schema-fonte-incidentes.md) — levantamento de `public.incidentes`
 - [docs/modelo-dimensional.md](docs/modelo-dimensional.md) — grão, adaptações e como recarregar o `dw`
 
