@@ -1,4 +1,4 @@
-# FIAP Incidentes Dashboard
+# MVP Locaweb — AIOps Incidentes
 
 Pipeline de dados e dashboard de incidentes de TI: da tabela bruta de chamados no
 banco Postgres `fiap` até um modelo dimensional (star schema) e uma aplicação web
