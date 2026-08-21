@@ -4,6 +4,9 @@ Referência rápida das tabelas do banco `fiap`. Para o raciocínio por trás do
 desenho (grão, filtros, adaptações), ver `docs/schema-fonte-incidentes.md` e
 `docs/modelo-dimensional.md` — este documento é só a lista de colunas.
 
+Schemas: `public` (fonte bruta), `staging` (camada Silver), `dw` (modelo
+dimensional / star schema), `ml` (marts de features para modelos de ML).
+
 ## Fonte
 
 ### `public.incidentes`
@@ -133,3 +136,78 @@ Fato central. **1 linha = 1 incidente** que exigiu esforço humano real
 | `aberto_at` | timestamp | |
 | `resolvido_at` | timestamp (nulo) | |
 | `encerrado_at` | timestamp | |
+
+## Marts de features para ML (schema `ml`)
+
+Espelham as antigas marts dbt do projeto AWS (mesma estrutura dos parquets em
+`data/raw/`). Populadas por `notebooks/05_ml_feature_marts.ipynb` a partir de
+`staging.incidentes_silver`. **Divergência de `dw.fct_incidentes`**:
+`target_risco_sla`/`score_risco_operacional` aqui usam o valor já calculado
+pela Silver (heurística original de P2=4h, sem o clamp de `-1`→`0` da Etapa 2)
+— por isso `target_risco_sla` pode valer `-1` (KPI desconhecido) nestas
+tabelas, o que nunca acontece em `dw.fct_incidentes`.
+
+### `ml.ml_base_features`
+1 linha por incidente (41.441, mesma população de `staging.incidentes_silver`).
+Equivalente a `int_incidents_enriched` / `ml_base_features.parquet`.
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `incident_id` | text (PK) | |
+| `incidente_pai` | text (nulo) | |
+| `aberto_por` | text | |
+| `prioridade` | text | |
+| `prioridade_num` | int | |
+| `produto` | text | |
+| `categoria` | text | |
+| `subcategoria` | text | |
+| `grupo_designado` | text | |
+| `item_configuracao` | text (nulo) | Único campo trazido via join com `public.incidentes` — a Silver não carrega |
+| `status` | text | |
+| `codigo_fechamento` | text | |
+| `entrou_kpi` | boolean | |
+| `kpi_violado` | boolean (nulo) | |
+| `kpi_status_int` | smallint | -1/0/1 |
+| `possui_pai` | boolean | |
+| `exige_intervencao` | boolean | Sempre `true` (grão já filtrado) |
+| `target_risco_sla` | smallint | -1/0/1 — ver nota de divergência acima |
+| `duracao_horas` / `duracao_segundos` | numeric / bigint | |
+| `aberto_at` / `resolvido_at` (nulo) / `encerrado_at` | timestamp | |
+| `data_abertura` | date | |
+| `hora_abertura`, `dia_semana_num`, `semana_ano`, `mes_abertura`, `trimestre`, `ano_mes` | int/text | |
+| `turno_abertura` | text | |
+| `fora_horario_comercial`, `abriu_fim_de_semana` | boolean | |
+| `horas_ate_resolucao` | numeric (nulo) | |
+| `foi_resolvido`, `is_filho_de_problema`, `triagem_incompleta`, `fechado_sem_tecnico`, `excedeu_tempo_esperado` | boolean | |
+| `score_risco_operacional` | smallint | 0-8 |
+
+### `ml.ml_cluster_dataset`
+1 linha por incidente (41.441). Subconjunto causa+efeito de `ml_base_features`
+para o K-Means — sem risco de vazamento (clusterização descreve o passado).
+Colunas: `incident_id` (PK/FK `ml_base_features`), `prioridade_num`,
+`grupo_designado`, `categoria`, `subcategoria`, `produto`, `hora_abertura`,
+`turno_abertura`, `dia_semana_num`, `fora_horario_comercial`,
+`abriu_fim_de_semana`, `mes_abertura`, `trimestre`, `possui_pai`,
+`is_filho_de_problema`, `triagem_incompleta`, `duracao_horas`,
+`horas_ate_resolucao`, `foi_resolvido`, `excedeu_tempo_esperado`,
+`fechado_sem_tecnico`, `target_risco_sla`, `kpi_status_int`,
+`score_risco_operacional`, `duracao_horas_scaled` (nulo — preenchido pelo
+notebook de clustering), `cluster_id` (nulo — idem).
+
+### `ml.ml_sla_classification_dataset`
+1 linha por incidente (41.441). Livre de vazamento de dados — só features
+disponíveis no minuto 0 de abertura. Colunas: `incident_id` (PK/FK
+`ml_base_features`), `prioridade_num`, `grupo_designado`, `categoria`,
+`subcategoria`, `possui_pai`, `is_filho_de_problema`, `triagem_incompleta`,
+`hora_abertura`, `dia_semana_num`, `turno_abertura`,
+`fora_horario_comercial`, `abriu_fim_de_semana`, `semana_ano`,
+`mes_abertura`, `duracao_horas`, `target_risco_sla` (smallint, target 1),
+`target_excedeu_tempo` (boolean, target alternativo).
+
+### `ml.ml_forecast_dataset`
+1 linha por dia (365). Agregação de `ml_base_features` no grão de dia, para o
+Prophet. Colunas: `data_abertura` (PK), `dia_semana_num`, `semana_ano`,
+`mes_abertura`, `trimestre`, `ano_mes`, `is_fim_de_semana`, `total_chamados`,
+`total_p1`..`total_p4`, `total_criticos`, `total_violacoes_sla`,
+`pct_violacao_sla`, `pressao_operacional_dia`, `score_risco_medio_dia`,
+`media_horas_resolucao`.
