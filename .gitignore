@@ -1,0 +1,27 @@
+# Ambiente / segredos
+.env
+.env.*
+!.env.example
+
+# Python
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Node / React
+node_modules/
+app/web/dist/
+app/web/.vite/
+
+# Dados e artefatos locais
+data/
+*.parquet
+*.csv
+saida_forecast/
+
+# Editor / SO
+.vscode/
+.idea/
+.DS_Store

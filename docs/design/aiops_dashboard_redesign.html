@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIOps Dashboard - Redesign</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tabler Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Configuração do Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(5px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos personalizados mínimos para elementos complexos (gráficos) */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .bc-bar { transition: all 0.3s ease; }
+        .bc-bar:hover { opacity: 1 !important; transform: scaleY(1.02); filter: brightness(1.1); }
+        
+        /* Ajuste do Heatmap para Grelha */
+        .heatmap-grid { display: grid; grid-template-columns: 100px repeat(7, 1fr); gap: 4px; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen p-0 md:p-6 flex items-center justify-center">
+
+<div class="w-full max-w-6xl bg-white md:rounded-2xl shadow-2xl overflow-hidden border border-slate-200 h-screen md:h-auto flex flex-col">
+  
+  <!-- Topbar -->
+  <header class="bg-slate-900 px-6 py-4 flex items-center justify-between shrink-0">
+    <div>
+      <h1 class="text-white text-base md:text-lg font-semibold tracking-wide flex items-center gap-2">
+        <i class="ti ti-activity text-cyan-400"></i> AIOps — Locaweb
+      </h1>
+      <p class="text-slate-400 text-xs mt-0.5">Inteligência preditiva de incidentes</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <span class="relative flex h-3 w-3">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+        </span>
+        <span class="bg-blue-500/20 text-blue-300 text-xs font-medium px-2.5 py-1 rounded-full border border-blue-500/30">
+            Live
+        </span>
+    </div>
+  </header>
+
+  <!-- Navbar -->
+  <nav class="bg-slate-900 flex overflow-x-auto hide-scrollbar shrink-0 px-4 pt-2 gap-1 border-b border-slate-700 shadow-md relative z-10">
+    <button class="nav-btn active flex items-center justify-center gap-2 px-5 py-3 text-sm whitespace-nowrap border-b-2 transition-all outline-none rounded-t-lg text-cyan-400 border-cyan-400 bg-slate-800 font-semibold" onclick="go(0)">
+      <i class="ti ti-layout-dashboard text-lg"></i> Painel
+    </button>
+    <button class="nav-btn flex items-center justify-center gap-2 px-5 py-3 text-sm whitespace-nowrap border-b-2 transition-all outline-none rounded-t-lg text-slate-400 border-transparent bg-transparent hover:bg-slate-800/50 hover:text-slate-200" onclick="go(1)">
+      <i class="ti ti-chart-bar text-lg"></i> Detalhe
+    </button>
+    <button class="nav-btn flex items-center justify-center gap-2 px-5 py-3 text-sm whitespace-nowrap border-b-2 transition-all outline-none rounded-t-lg text-slate-400 border-transparent bg-transparent hover:bg-slate-800/50 hover:text-slate-200" onclick="go(2)">
+      <i class="ti ti-target-arrow text-lg"></i> KPI
+    </button>
+    <button class="nav-btn flex items-center justify-center gap-2 px-5 py-3 text-sm whitespace-nowrap border-b-2 transition-all outline-none rounded-t-lg text-slate-400 border-transparent bg-transparent hover:bg-slate-800/50 hover:text-slate-200" onclick="go(3)">
+      <i class="ti ti-bulb text-lg"></i> Fatores
+    </button>
+    <button class="nav-btn flex items-center justify-center gap-2 px-5 py-3 text-sm whitespace-nowrap border-b-2 transition-all outline-none rounded-t-lg text-slate-400 border-transparent bg-transparent hover:bg-slate-800/50 hover:text-slate-200" onclick="go(4)">
+      <i class="ti ti-circles-relation text-lg"></i> Clusters
+    </button>
+    <button class="nav-btn flex items-center justify-center gap-2 px-5 py-3 text-sm whitespace-nowrap border-b-2 transition-all outline-none rounded-t-lg text-slate-400 border-transparent bg-transparent hover:bg-slate-800/50 hover:text-slate-200 relative" onclick="go(5)">
+      <i class="ti ti-bell-ringing text-lg"></i> Alertas
+      <span class="absolute top-2.5 right-3 w-2 h-2 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+    </button>
+  </nav>
+
+  <!-- Área de Conteúdo principal -->
+  <div class="flex-1 overflow-y-auto bg-slate-50/50 p-4 md:p-6 relative">
+      
+      <!-- S0: Painel -->
+      <div id="s0" class="screen animate-fade-in block">
+        
+        <!-- Filtros -->
+        <div class="flex gap-2 mb-6 flex-wrap">
+          <button class="bg-blue-600 text-white border border-blue-600 px-4 py-1.5 rounded-full text-xs font-medium shadow-sm transition-colors hover:bg-blue-700">Todas prioridades</button>
+          <button class="bg-white text-slate-600 border border-slate-300 px-4 py-1.5 rounded-full text-xs font-medium shadow-sm transition-colors hover:bg-slate-50">P2 - Alta</button>
+          <button class="bg-white text-slate-600 border border-slate-300 px-4 py-1.5 rounded-full text-xs font-medium shadow-sm transition-colors hover:bg-slate-50">P3 - Média</button>
+          <button class="bg-white text-slate-600 border border-slate-300 px-4 py-1.5 rounded-full text-xs font-medium shadow-sm transition-colors hover:bg-slate-50 flex items-center gap-1"><i class="ti ti-calendar text-sm"></i> Últimos 30 dias</button>
+        </div>
+
+        <!-- KPIs -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-600"></div>
+            <div class="text-xs text-slate-500 font-medium mb-1 uppercase tracking-wider">Previsão D+1</div>
+            <div class="text-4xl font-bold text-slate-800 mb-1 group-hover:scale-105 transition-transform origin-left">72</div>
+            <div class="text-xs text-slate-500 flex items-center gap-1"><i class="ti ti-calendar-event text-slate-400"></i> incidentes amanhã</div>
+          </div>
+          
+          <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div class="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"></div>
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="text-xs text-slate-500 font-medium mb-1 uppercase tracking-wider">Previsão D+7 (média/dia)</div>
+                    <div class="text-4xl font-bold text-slate-800 mb-1 group-hover:scale-105 transition-transform origin-left">68</div>
+                    <div class="text-xs text-slate-500 flex items-center gap-1"><i class="ti ti-calendar-week text-slate-400"></i> próximos 7 dias</div>
+                </div>
+                <span class="bg-amber-100 text-amber-800 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1"><i class="ti ti-trending-up"></i> +12% vs média</span>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+            <div class="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"></div>
+            <div class="text-xs text-slate-500 font-medium mb-1 uppercase tracking-wider">Risco de OLA</div>
+            <div class="text-3xl font-bold text-amber-500 mb-3 mt-1 flex items-center gap-2"><i class="ti ti-alert-triangle"></i> Médio</div>
+            <span class="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-medium px-2.5 py-1 rounded-md">Atenção a P2</span>
+          </div>
+        </div>
+
+        <!-- Gráfico -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4">
+          <h3 class="text-sm font-semibold text-slate-700 mb-6 flex items-center gap-2">
+            <i class="ti ti-chart-histogram text-slate-400 text-lg"></i> Volume diário — histórico vs previsão
+          </h3>
+          
+          <!-- Mock Chart -->
+          <div class="flex items-end gap-[2px] md:gap-1 h-40 mt-8 border-b border-slate-200 pb-1">
+            <!-- Histórico -->
+            <div class="bc-bar rounded-t-sm flex-1" style="height:55%;background:#3b82f6;opacity:.6;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:62%;background:#3b82f6;opacity:.6;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:48%;background:#3b82f6;opacity:.6;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:70%;background:#3b82f6;opacity:.6;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:65%;background:#3b82f6;opacity:.6;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:30%;background:#3b82f6;opacity:.3;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:28%;background:#3b82f6;opacity:.3;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:72%;background:#3b82f6;opacity:.6;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:80%;background:#3b82f6;opacity:.6;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:75%;background:#3b82f6;opacity:.6;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:68%;background:#3b82f6;opacity:.6;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:60%;background:#3b82f6;opacity:.6;"></div>
+            <div class="bc-bar rounded-t-sm flex-1" style="height:35%;background:#3b82f6;opacity:.3;"></div>
+            <div class="bc-bar rounded-t-sm flex-1 border-r border-dashed border-slate-400 pr-1" style="height:32%;background:#3b82f6;opacity:.3;"></div>
+            
+            <!-- Previsão -->
+            <!-- D+1 Destacado -->
+            <div class="bc-bar rounded-t-sm flex-1 ml-1 relative border-t-2 border-x-2 border-dashed border-cyan-500 bg-cyan-50" style="height:85%;" title="Previsão D+1: 72 incidentes">
+                <div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-cyan-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm z-10 whitespace-nowrap">D+1</div>
+            </div>
+            <!-- D+2 a D+7 -->
+            <div class="bc-bar rounded-t-sm flex-1 border-t-2 border-x-2 border-dashed border-cyan-400 bg-cyan-50/40" style="height:80%;" title="Previsão D+2"></div>
+            <div class="bc-bar rounded-t-sm flex-1 border-t-2 border-x-2 border-dashed border-cyan-400 bg-cyan-50/40" style="height:75%;" title="Previsão D+3"></div>
+            <div class="bc-bar rounded-t-sm flex-1 border-t-2 border-x-2 border-dashed border-cyan-400 bg-cyan-50/40" style="height:70%;" title="Previsão D+4"></div>
+            <div class="bc-bar rounded-t-sm flex-1 border-t-2 border-x-2 border-dashed border-cyan-400 bg-cyan-50/40" style="height:65%;" title="Previsão D+5"></div>
+            <div class="bc-bar rounded-t-sm flex-1 border-t-2 border-x-2 border-dashed border-cyan-400 bg-cyan-50/40" style="height:60%;" title="Previsão D+6"></div>
+            <div class="bc-bar rounded-t-sm flex-1 border-t-2 border-x-2 border-dashed border-cyan-400 bg-cyan-50/40" style="height:55%;" title="Previsão D+7"></div>
+          </div>
+          
+          <div class="flex gap-6 mt-4 justify-center md:justify-start">
+            <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                <div class="w-3 h-3 rounded bg-blue-500 opacity-60"></div> Histórico
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                <div class="w-3 h-3 rounded border-2 border-dashed border-cyan-500 bg-cyan-50"></div> Previsão (D+1 a D+7)
+            </div>
+          </div>
+        </div>
+        <div class="text-center text-xs text-slate-400 mt-2 font-medium">Ecrã 1 — Painel principal · visão geral D+1 e D+7</div>
+      </div>
+
+      <!-- S1: Detalhamento -->
+      <div id="s1" class="screen hidden animate-fade-in">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          
+          <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+            <div class="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
+            <div class="text-xs text-slate-500 font-medium mb-1 uppercase tracking-wider flex items-center gap-1"><i class="ti ti-chevrons-up text-red-500 text-base"></i> P2 — Alta</div>
+            <div class="text-4xl font-bold text-red-500 mb-1 mt-2">18</div>
+            <div class="text-xs text-slate-500 mb-4">previstos amanhã · SLA 4h</div>
+            
+            <div class="w-full bg-slate-100 rounded-full h-2 mb-1">
+              <div class="bg-red-500 h-2 rounded-full" style="width: 72%"></div>
+            </div>
+            <div class="text-xs text-red-600 font-medium text-right">72% do limite mensal</div>
+          </div>
+
+          <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+            <div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-600"></div>
+            <div class="text-xs text-slate-500 font-medium mb-1 uppercase tracking-wider flex items-center gap-1"><i class="ti ti-chevron-up text-blue-600 text-base"></i> P3 — Média</div>
+            <div class="text-4xl font-bold text-blue-600 mb-1 mt-2">54</div>
+            <div class="text-xs text-slate-500 mb-4">previstos amanhã · SLA 12h</div>
+            
+            <div class="w-full bg-slate-100 rounded-full h-2 mb-1">
+              <div class="bg-blue-600 h-2 rounded-full" style="width: 45%"></div>
+            </div>
+            <div class="text-xs text-blue-600 font-medium text-right">45% do limite mensal</div>
+          </div>
+
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4">
+          <h3 class="text-sm font-semibold text-slate-700 mb-5 flex items-center gap-2">
+            <i class="ti ti-server text-slate-400 text-lg"></i> Top 5 categorias com maior volume previsto (Amanhã)
+          </h3>
+          
+          <div class="space-y-4">
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-700 w-28 shrink-0">Infraestrutura</div>
+                  <div class="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div class="bg-red-500 h-2.5 rounded-full" style="width:85%"></div>
+                  </div>
+                  <div class="text-xs font-bold text-red-500 w-8 text-right">24</div>
+              </div>
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-700 w-28 shrink-0">Rede</div>
+                  <div class="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div class="bg-amber-500 h-2.5 rounded-full" style="width:65%"></div>
+                  </div>
+                  <div class="text-xs font-bold text-amber-500 w-8 text-right">18</div>
+              </div>
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-700 w-28 shrink-0">Bases de Dados</div>
+                  <div class="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div class="bg-amber-500 h-2.5 rounded-full" style="width:45%"></div>
+                  </div>
+                  <div class="text-xs font-bold text-amber-500 w-8 text-right">12</div>
+              </div>
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-700 w-28 shrink-0">Aplicação</div>
+                  <div class="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div class="bg-blue-500 h-2.5 rounded-full" style="width:35%"></div>
+                  </div>
+                  <div class="text-xs font-bold text-blue-500 w-8 text-right">10</div>
+              </div>
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-700 w-28 shrink-0">Storage</div>
+                  <div class="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div class="bg-emerald-500 h-2.5 rounded-full" style="width:20%"></div>
+                  </div>
+                  <div class="text-xs font-bold text-emerald-500 w-8 text-right">8</div>
+              </div>
+          </div>
+        </div>
+        <div class="text-center text-xs text-slate-400 mt-2 font-medium">Ecrã 2 — Detalhamento por prioridade e categoria</div>
+      </div>
+
+      <!-- S2: KPI -->
+      <div id="s2" class="screen hidden animate-fade-in">
+        
+        <div class="grid grid-cols-3 gap-3 mb-6">
+          <div class="bg-slate-100 rounded-lg p-3 text-center border border-slate-200">
+              <div class="text-[10px] text-slate-500 uppercase tracking-wide mb-1 font-semibold">Dias decorridos</div>
+              <div class="text-xl font-bold text-slate-800">9</div>
+          </div>
+          <div class="bg-slate-100 rounded-lg p-3 text-center border border-slate-200">
+              <div class="text-[10px] text-slate-500 uppercase tracking-wide mb-1 font-semibold">Dias restantes</div>
+              <div class="text-xl font-bold text-slate-800">22</div>
+          </div>
+          <div class="bg-red-50 rounded-lg p-3 text-center border border-red-100">
+              <div class="text-[10px] text-red-600 uppercase tracking-wide mb-1 font-semibold">OLA Quebrados</div>
+              <div class="text-xl font-bold text-red-600">8</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4">
+          <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
+            <h3 class="text-sm font-bold text-slate-800">P2 — Alta <span class="text-slate-400 font-normal ml-2">Meta: máx 31 quebras/ano</span></h3>
+            <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">Atenção</span>
+          </div>
+          
+          <div class="space-y-4 mb-6">
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-600 w-36 shrink-0">OLA quebrados (mês)</div>
+                  <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden"><div class="bg-amber-500 h-2 rounded-full" style="width:72%"></div></div>
+                  <div class="text-xs font-bold text-amber-600 w-10 text-right">72%</div>
+              </div>
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-600 w-36 shrink-0">Volume tratado (mês)</div>
+                  <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden"><div class="bg-blue-500 h-2 rounded-full" style="width:55%"></div></div>
+                  <div class="text-xs font-bold text-blue-600 w-10 text-right">55%</div>
+              </div>
+          </div>
+
+          <div class="bg-slate-50 rounded-lg p-4 flex justify-between items-center border border-slate-100">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-amber-100 rounded-lg text-amber-600"><i class="ti ti-dice-5 text-xl"></i></div>
+                <div>
+                    <div class="text-sm font-semibold text-slate-800">Probabilidade de atingir meta anual</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Baseado no modelo preditivo atual</div>
+                </div>
+            </div>
+            <div class="text-3xl font-black text-amber-500">61%</div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4">
+          <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-3">
+            <h3 class="text-sm font-bold text-slate-800">P3 — Média <span class="text-slate-400 font-normal ml-2">Meta: máx 201 quebras/ano</span></h3>
+            <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">No Prazo</span>
+          </div>
+          
+          <div class="space-y-4 mb-6">
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-600 w-36 shrink-0">OLA quebrados (mês)</div>
+                  <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden"><div class="bg-emerald-500 h-2 rounded-full" style="width:38%"></div></div>
+                  <div class="text-xs font-bold text-emerald-600 w-10 text-right">38%</div>
+              </div>
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-600 w-36 shrink-0">Volume tratado (mês)</div>
+                  <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden"><div class="bg-blue-500 h-2 rounded-full" style="width:48%"></div></div>
+                  <div class="text-xs font-bold text-blue-600 w-10 text-right">48%</div>
+              </div>
+          </div>
+
+          <div class="bg-slate-50 rounded-lg p-4 flex justify-between items-center border border-slate-100">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-emerald-100 rounded-lg text-emerald-600"><i class="ti ti-chart-arrows-vertical text-xl"></i></div>
+                <div>
+                    <div class="text-sm font-semibold text-slate-800">Probabilidade de atingir meta anual</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Tendência positiva mantida</div>
+                </div>
+            </div>
+            <div class="text-3xl font-black text-emerald-500">84%</div>
+          </div>
+        </div>
+
+        <div class="text-center text-xs text-slate-400 mt-2 font-medium">Ecrã 3 — Projeção de atingimento de KPI e risco de OLA</div>
+      </div>
+
+      <!-- S3: Fatores -->
+      <div id="s3" class="screen hidden animate-fade-in">
+        
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4">
+          <h3 class="text-sm font-bold text-slate-800 mb-1">Feature Importance</h3>
+          <p class="text-xs text-slate-500 mb-5">Peso relativo de cada fator no modelo de Machine Learning</p>
+          
+          <div class="space-y-3">
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-700 w-32 shrink-0">Dia da semana</div>
+                  <div class="flex-1 bg-slate-100 rounded-sm h-4"><div class="bg-slate-700 h-4 rounded-sm" style="width:92%"></div></div>
+                  <div class="text-xs font-bold text-slate-700 w-10 text-right">92%</div>
+              </div>
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-700 w-32 shrink-0">Categoria</div>
+                  <div class="flex-1 bg-slate-100 rounded-sm h-4"><div class="bg-slate-600 h-4 rounded-sm" style="width:74%"></div></div>
+                  <div class="text-xs font-bold text-slate-600 w-10 text-right">74%</div>
+              </div>
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-700 w-32 shrink-0">Volume D-7 (lag)</div>
+                  <div class="flex-1 bg-slate-100 rounded-sm h-4"><div class="bg-slate-500 h-4 rounded-sm" style="width:68%"></div></div>
+                  <div class="text-xs font-bold text-slate-500 w-10 text-right">68%</div>
+              </div>
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-700 w-32 shrink-0">Mês do ano</div>
+                  <div class="flex-1 bg-slate-100 rounded-sm h-4"><div class="bg-slate-400 h-4 rounded-sm" style="width:52%"></div></div>
+                  <div class="text-xs font-bold text-slate-400 w-10 text-right">52%</div>
+              </div>
+              <div class="flex items-center gap-4">
+                  <div class="text-xs font-medium text-slate-700 w-32 shrink-0">Item de configuração</div>
+                  <div class="flex-1 bg-slate-100 rounded-sm h-4"><div class="bg-slate-300 h-4 rounded-sm" style="width:38%"></div></div>
+                  <div class="text-xs font-bold text-slate-400 w-10 text-right">38%</div>
+              </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4">
+          <div class="flex items-center gap-2 mb-1">
+            <h3 class="text-sm font-bold text-slate-800">Valores SHAP</h3>
+            <span class="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded font-bold">Amanhã</span>
+          </div>
+          <p class="text-xs text-slate-500 mb-5">Impacto específico (+ ou -) na previsão do dia seguinte</p>
+          
+          <div class="relative mt-6 mb-2">
+              <!-- Eixo central -->
+              <div class="absolute left-1/2 top-0 bottom-0 w-px bg-slate-300 -translate-x-1/2 z-0"></div>
+              
+              <div class="space-y-3 relative z-10">
+                  <div class="flex items-center gap-2">
+                      <div class="text-xs font-medium text-slate-600 w-[110px] md:w-[130px] shrink-0 text-right pr-2">Segunda-feira</div>
+                      <div class="flex-1 flex items-center h-5">
+                          <div class="w-1/2 flex justify-end"></div>
+                          <div class="w-1/2 flex justify-start"><div class="h-4 bg-red-400 rounded-r-sm" style="width: 45%;"></div></div>
+                      </div>
+                      <div class="text-xs font-bold text-red-500 w-8">+18</div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                      <div class="text-xs font-medium text-slate-600 w-[110px] md:w-[130px] shrink-0 text-right pr-2">Infraestrutura</div>
+                      <div class="flex-1 flex items-center h-5">
+                          <div class="w-1/2 flex justify-end"></div>
+                          <div class="w-1/2 flex justify-start"><div class="h-4 bg-red-400 rounded-r-sm" style="width: 35%;"></div></div>
+                      </div>
+                      <div class="text-xs font-bold text-red-500 w-8">+14</div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                      <div class="text-xs font-medium text-slate-600 w-[110px] md:w-[130px] shrink-0 text-right pr-2">Início mês (1-5)</div>
+                      <div class="flex-1 flex items-center h-5">
+                          <div class="w-1/2 flex justify-end"></div>
+                          <div class="w-1/2 flex justify-start"><div class="h-4 bg-amber-400 rounded-r-sm" style="width: 26%;"></div></div>
+                      </div>
+                      <div class="text-xs font-bold text-amber-500 w-8">+11</div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                      <div class="text-xs font-medium text-slate-600 w-[110px] md:w-[130px] shrink-0 text-right pr-2">Lag D-7 alto</div>
+                      <div class="flex-1 flex items-center h-5">
+                          <div class="w-1/2 flex justify-end"></div>
+                          <div class="w-1/2 flex justify-start"><div class="h-4 bg-amber-400 rounded-r-sm" style="width: 20%;"></div></div>
+                      </div>
+                      <div class="text-xs font-bold text-amber-500 w-8">+9</div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                      <div class="text-xs font-medium text-slate-600 w-[110px] md:w-[130px] shrink-0 text-right pr-2">Sexta-feira</div>
+                      <div class="flex-1 flex items-center h-5">
+                          <div class="w-1/2 flex justify-end"><div class="h-4 bg-emerald-400 rounded-l-sm" style="width: 18%;"></div></div>
+                          <div class="w-1/2 flex justify-start"></div>
+                      </div>
+                      <div class="text-xs font-bold text-emerald-500 w-8 text-right">-7</div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                      <div class="text-xs font-medium text-slate-600 w-[110px] md:w-[130px] shrink-0 text-right pr-2">Fim de semana</div>
+                      <div class="flex-1 flex items-center h-5">
+                          <div class="w-1/2 flex justify-end"><div class="h-4 bg-emerald-400 rounded-l-sm" style="width: 38%;"></div></div>
+                          <div class="w-1/2 flex justify-start"></div>
+                      </div>
+                      <div class="text-xs font-bold text-emerald-500 w-8 text-right">-15</div>
+                  </div>
+              </div>
+          </div>
+        </div>
+
+        <!-- Heatmap -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-4 overflow-x-auto">
+            <h3 class="text-sm font-bold text-slate-800 mb-4">Volume médio: Categoria vs Dia da Semana</h3>
+            
+            <div class="min-w-[400px]">
+                <div class="heatmap-grid mb-1">
+                    <div></div> <!-- Spacer -->
+                    <div class="text-center text-[10px] font-semibold text-slate-500 uppercase">Seg</div>
+                    <div class="text-center text-[10px] font-semibold text-slate-500 uppercase">Ter</div>
+                    <div class="text-center text-[10px] font-semibold text-slate-500 uppercase">Qua</div>
+                    <div class="text-center text-[10px] font-semibold text-slate-500 uppercase">Qui</div>
+                    <div class="text-center text-[10px] font-semibold text-slate-500 uppercase">Sex</div>
+                    <div class="text-center text-[10px] font-semibold text-slate-500 uppercase">Sáb</div>
+                    <div class="text-center text-[10px] font-semibold text-slate-500 uppercase">Dom</div>
+                </div>
+                
+                <div class="heatmap-grid mb-1 items-center">
+                    <div class="text-[10px] font-medium text-slate-600 text-right pr-2">Infraestrutura</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-white bg-red-600">34</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-white bg-red-500">28</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-red-900 bg-red-300">22</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-red-900 bg-red-300">20</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-red-900 bg-red-200">15</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 bg-slate-50">4</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 bg-slate-50">3</div>
+                </div>
+                <div class="heatmap-grid mb-1 items-center">
+                    <div class="text-[10px] font-medium text-slate-600 text-right pr-2">Rede</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-white bg-red-500">26</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-red-900 bg-red-300">21</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-red-900 bg-red-200">18</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-red-900 bg-red-200">17</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-500 bg-slate-100">12</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 bg-slate-50">3</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 bg-slate-50">2</div>
+                </div>
+                <div class="heatmap-grid mb-1 items-center">
+                    <div class="text-[10px] font-medium text-slate-600 text-right pr-2">Bases de Dados</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-red-900 bg-red-300">20</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-red-900 bg-red-200">17</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-red-900 bg-red-200">16</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-600 bg-slate-100">14</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-500 bg-slate-100">10</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 bg-slate-50">2</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 bg-slate-50">1</div>
+                </div>
+                <div class="heatmap-grid mb-1 items-center">
+                    <div class="text-[10px] font-medium text-slate-600 text-right pr-2">Aplicação</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-red-900 bg-red-200">14</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-500 bg-slate-100">12</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-500 bg-slate-100">11</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-500 bg-slate-100">10</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-500 bg-slate-100">8</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 bg-slate-50">1</div>
+                    <div class="h-7 rounded flex items-center justify-center text-[10px] font-bold text-slate-400 bg-slate-50">1</div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end items-center gap-2 mt-4 text-[10px] text-slate-500">
+                <span>Baixo</span>
+                <div class="flex h-3 rounded overflow-hidden">
+                    <div class="w-5 bg-slate-50"></div>
+                    <div class="w-5 bg-slate-100"></div>
+                    <div class="w-5 bg-red-200"></div>
+                    <div class="w-5 bg-red-300"></div>
+                    <div class="w-5 bg-red-500"></div>
+                    <div class="w-5 bg-red-600"></div>
+                </div>
+                <span>Alto volume</span>
+            </div>
+        </div>
+        <div class="text-center text-xs text-slate-400 mt-2 font-medium">Ecrã 4 — Fatores · feature importance + SHAP + mapa de calor</div>
+      </div>
+
+      <!-- S4: Clusters -->
+      <div id="s4" class="screen hidden animate-fade-in">
+        
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-5">
+          <h3 class="text-sm font-bold text-slate-800 mb-1">Topologia de Incidentes (Clusters ML)</h3>
+          <p class="text-xs text-slate-500 mb-4">Tamanho = Volume | Eixo X = Duração | Eixo Y = Risco OLA</p>
+          
+          <div class="relative h-64 bg-slate-50 border border-slate-100 rounded-lg mb-4 overflow-hidden shadow-inner">
+            <!-- Grid lines horizontais (Risco OLA) -->
+            <div class="absolute left-8 right-0 bottom-[25%] h-px border-t border-dashed border-slate-200"></div>
+            <div class="absolute left-8 right-0 bottom-[50%] h-px border-t border-dashed border-slate-200"></div>
+            <div class="absolute left-8 right-0 bottom-[75%] h-px border-t border-dashed border-slate-200"></div>
+            
+            <!-- Grid lines verticais (Duração) -->
+            <div class="absolute top-0 bottom-6 left-[25%] w-px border-l border-dashed border-slate-200"></div>
+            <div class="absolute top-0 bottom-6 left-[50%] w-px border-l border-dashed border-slate-200"></div>
+            <div class="absolute top-0 bottom-6 left-[75%] w-px border-l border-dashed border-slate-200"></div>
+
+            <!-- Eixos Principais -->
+            <div class="absolute bottom-6 left-6 right-0 h-px bg-slate-300"></div>
+            <div class="absolute left-8 top-0 bottom-6 w-px bg-slate-300"></div>
+            
+            <!-- Labels Eixos -->
+            <div class="absolute bottom-1 left-1/2 -translate-x-1/2 text-[10px] font-medium text-slate-500 tracking-wide">Duração Média (Horas) →</div>
+            <div class="absolute top-1/2 left-2 -translate-y-1/2 -rotate-90 text-[10px] font-medium text-slate-500 tracking-wide origin-center whitespace-nowrap">Risco OLA ↑</div>
+
+            <!-- Bolhas (Clusters) alinhadas aos dados dos cards -->
+            <!-- A: Alto risco (38%), Alta duração (5.2h), Menor volume (3.84k) -->
+            <div class="absolute rounded-full flex flex-col items-center justify-center border-2 shadow-sm backdrop-blur-sm transition-transform hover:scale-110 cursor-pointer z-10 hover:z-20" 
+                 style="width:70px;height:70px;background:rgba(239,68,68,0.15);border-color:#ef4444;bottom:80%;left:85%;transform:translate(-50%, 50%);" title="Cluster A: Críticos">
+                <span class="text-red-700 font-bold text-xs">A</span>
+                <span class="text-red-600 text-[9px] mt-0.5">3.84k</span>
+            </div>
+            
+            <!-- B: Risco baixo/médio (9%), Duração curta (1.8h), Maior volume (8.96k) -->
+            <div class="absolute rounded-full flex flex-col items-center justify-center border-2 shadow-sm backdrop-blur-sm transition-transform hover:scale-110 cursor-pointer z-10 hover:z-20" 
+                 style="width:110px;height:110px;background:rgba(245,158,11,0.15);border-color:#f59e0b;bottom:30%;left:35%;transform:translate(-50%, 50%);" title="Cluster B: Recorrentes">
+                <span class="text-amber-700 font-bold text-xs">B</span>
+                <span class="text-amber-600 text-[9px] mt-0.5">8.96k</span>
+            </div>
+
+            <!-- C: Risco médio (18%), Duração média (3.1h), Volume alto (7.68k) -->
+            <div class="absolute rounded-full flex flex-col items-center justify-center border-2 shadow-sm backdrop-blur-sm transition-transform hover:scale-110 cursor-pointer z-10 hover:z-20" 
+                 style="width:90px;height:90px;background:rgba(59,130,246,0.15);border-color:#3b82f6;bottom:50%;left:55%;transform:translate(-50%, 50%);" title="Cluster C: Sazonais">
+                <span class="text-blue-700 font-bold text-xs">C</span>
+                <span class="text-blue-600 text-[9px] mt-0.5">7.68k</span>
+            </div>
+
+            <!-- D: Risco mínimo (2%), Duração mínima (0.9h), Volume médio (5.12k) -->
+            <div class="absolute rounded-full flex flex-col items-center justify-center border-2 shadow-sm backdrop-blur-sm transition-transform hover:scale-110 cursor-pointer z-10 hover:z-20" 
+                 style="width:80px;height:80px;background:rgba(16,185,129,0.15);border-color:#10b981;bottom:15%;left:15%;transform:translate(-50%, 50%);" title="Cluster D: Baixo impacto">
+                <span class="text-emerald-700 font-bold text-xs">D</span>
+                <span class="text-emerald-600 text-[9px] mt-0.5">5.12k</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <!-- Cluster A -->
+            <div class="bg-red-50 rounded-xl border border-red-100 p-4">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">A</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-red-900 leading-tight">Críticos prolongados</h4>
+                        <p class="text-[10px] text-red-700 mt-0.5">Alta duração · P2 dominante · Alto risco OLA</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                    <span class="px-2 py-0.5 bg-white border border-red-200 text-red-700 text-[9px] font-semibold rounded-md">Infra</span>
+                    <span class="px-2 py-0.5 bg-white border border-red-200 text-red-700 text-[9px] font-semibold rounded-md">Rede</span>
+                    <span class="px-2 py-0.5 bg-white border border-red-200 text-red-700 text-[9px] font-semibold rounded-md">P2</span>
+                    <span class="px-2 py-0.5 bg-white border border-red-200 text-red-700 text-[9px] font-semibold rounded-md">Seg-Ter</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-red-600 mb-0.5">Volume</div><div class="text-sm font-bold text-red-900">3.84k</div></div>
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-red-600 mb-0.5">Duração</div><div class="text-sm font-bold text-red-900">5,2h</div></div>
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-red-600 mb-0.5">Quebra OLA</div><div class="text-sm font-bold text-red-900">38%</div></div>
+                </div>
+            </div>
+
+            <!-- Cluster B -->
+            <div class="bg-amber-50 rounded-xl border border-amber-100 p-4">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">B</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-amber-900 leading-tight">Recorrentes rápidos</h4>
+                        <p class="text-[10px] text-amber-700 mt-0.5">Alta frequência · Curta duração · Causas repetidas</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                    <span class="px-2 py-0.5 bg-white border border-amber-200 text-amber-700 text-[9px] font-semibold rounded-md">DB</span>
+                    <span class="px-2 py-0.5 bg-white border border-amber-200 text-amber-700 text-[9px] font-semibold rounded-md">App</span>
+                    <span class="px-2 py-0.5 bg-white border border-amber-200 text-amber-700 text-[9px] font-semibold rounded-md">P3</span>
+                    <span class="px-2 py-0.5 bg-white border border-amber-200 text-amber-700 text-[9px] font-semibold rounded-md">Diário</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-amber-600 mb-0.5">Volume</div><div class="text-sm font-bold text-amber-900">8.96k</div></div>
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-amber-600 mb-0.5">Duração</div><div class="text-sm font-bold text-amber-900">1,8h</div></div>
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-amber-600 mb-0.5">Quebra OLA</div><div class="text-sm font-bold text-amber-900">9%</div></div>
+                </div>
+            </div>
+
+            <!-- Cluster C -->
+            <div class="bg-blue-50 rounded-xl border border-blue-100 p-4">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">C</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-blue-900 leading-tight">Sazonais previsíveis</h4>
+                        <p class="text-[10px] text-blue-700 mt-0.5">Dias específicos · Padrão claro</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                    <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-semibold rounded-md">Segunda</span>
+                    <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-semibold rounded-md">Início mês</span>
+                    <span class="px-2 py-0.5 bg-white border border-blue-200 text-blue-700 text-[9px] font-semibold rounded-md">Mix P2/P3</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-blue-600 mb-0.5">Volume</div><div class="text-sm font-bold text-blue-900">7.68k</div></div>
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-blue-600 mb-0.5">Duração</div><div class="text-sm font-bold text-blue-900">3,1h</div></div>
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-blue-600 mb-0.5">Quebra OLA</div><div class="text-sm font-bold text-blue-900">18%</div></div>
+                </div>
+            </div>
+
+            <!-- Cluster D -->
+            <div class="bg-emerald-50 rounded-xl border border-emerald-100 p-4">
+                <div class="flex items-start gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold shadow-sm shrink-0">D</div>
+                    <div>
+                        <h4 class="text-sm font-bold text-emerald-900 leading-tight">Baixo impacto</h4>
+                        <p class="text-[10px] text-emerald-700 mt-0.5">Curta duração · Rotineiros · Sem violações</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-1.5 mb-4">
+                    <span class="px-2 py-0.5 bg-white border border-emerald-200 text-emerald-700 text-[9px] font-semibold rounded-md">Storage</span>
+                    <span class="px-2 py-0.5 bg-white border border-emerald-200 text-emerald-700 text-[9px] font-semibold rounded-md">P3</span>
+                    <span class="px-2 py-0.5 bg-white border border-emerald-200 text-emerald-700 text-[9px] font-semibold rounded-md">Fds</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-emerald-600 mb-0.5">Volume</div><div class="text-sm font-bold text-emerald-900">5.12k</div></div>
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-emerald-600 mb-0.5">Duração</div><div class="text-sm font-bold text-emerald-900">0,9h</div></div>
+                    <div class="bg-white/60 rounded p-2 text-center"><div class="text-[9px] text-emerald-600 mb-0.5">Quebra OLA</div><div class="text-sm font-bold text-emerald-900">2%</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center text-xs text-slate-400 mt-2 font-medium">Ecrã 5 — Clusters · gráfico de bolhas + cards por grupo</div>
+      </div>
+
+      <!-- S5: Alertas -->
+      <div id="s5" class="screen hidden animate-fade-in">
+        
+        <div class="space-y-3 mb-6">
+            <!-- Alerta Crítico -->
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm flex gap-4 items-start">
+                <i class="ti ti-alert-octagon text-red-500 text-2xl mt-0.5"></i>
+                <div>
+                    <h4 class="text-sm font-bold text-red-900 mb-1">Alerta crítico — Amanhã (Segunda-feira)</h4>
+                    <p class="text-xs text-red-800 leading-relaxed">Volume previsto 25% acima da média histórica. A Infraestrutura concentra 33% do risco. Elevado risco de violação de OLA em incidentes P2.</p>
+                </div>
+            </div>
+
+            <!-- Alerta Médio -->
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl shadow-sm flex gap-4 items-start">
+                <i class="ti ti-alert-triangle text-amber-500 text-2xl mt-0.5"></i>
+                <div>
+                    <h4 class="text-sm font-bold text-amber-900 mb-1">Alerta moderado — Próximos 7 dias</h4>
+                    <p class="text-xs text-amber-800 leading-relaxed">Item de configuração XYZ apresenta um padrão recorrente. 5 ocorrências no último mês. Próxima falha estimada pelo modelo: Quarta-feira.</p>
+                </div>
+            </div>
+
+            <!-- Info -->
+            <div class="bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded-r-xl shadow-sm flex gap-4 items-start">
+                <i class="ti ti-circle-check text-emerald-500 text-2xl mt-0.5"></i>
+                <div>
+                    <h4 class="text-sm font-bold text-emerald-900 mb-1">Estável — Próximo fim de semana</h4>
+                    <p class="text-xs text-emerald-800 leading-relaxed">Volume previsto 61% abaixo da média. Sem histórico de violações de OLA em incidentes P3 durante os fins de semana neste período.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <h3 class="text-sm font-bold text-slate-800 mb-5 flex items-center gap-2">
+              <i class="ti ti-robot text-blue-600 text-lg"></i> Recomendações Prescritivas para a Operação
+          </h3>
+          
+          <div class="space-y-4">
+              <div class="flex gap-4 items-start pb-4 border-b border-slate-100 last:border-0 last:pb-0">
+                  <div class="w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
+                  <div class="flex-1">
+                      <p class="text-sm text-slate-700 leading-relaxed mb-2">Reforçar equipa de Infraestrutura na manhã de segunda-feira (08h–12h), período de maior concentração histórica de incidentes críticos.</p>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-red-100 text-red-700 text-[10px] font-bold uppercase"><i class="ti ti-flame"></i> Alta prioridade</span>
+                  </div>
+              </div>
+              
+              <div class="flex gap-4 items-start pb-4 border-b border-slate-100 last:border-0 last:pb-0">
+                  <div class="w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
+                  <div class="flex-1">
+                      <p class="text-sm text-slate-700 leading-relaxed mb-2">Abrir chamado preventivo (manutenção) para o item de configuração XYZ antes de quarta-feira, devido ao padrão de recorrência identificado pelo modelo ML.</p>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-100 text-amber-700 text-[10px] font-bold uppercase"><i class="ti ti-clock"></i> Média prioridade</span>
+                  </div>
+              </div>
+
+              <div class="flex gap-4 items-start pb-4 border-b border-slate-100 last:border-0 last:pb-0">
+                  <div class="w-6 h-6 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</div>
+                  <div class="flex-1">
+                      <p class="text-sm text-slate-700 leading-relaxed mb-2">Monitorizar ativamente a categoria Rede ao longo da semana. A atual tendência de alta pode gerar violações em cadeia de OLA em incidentes P3.</p>
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-100 text-blue-700 text-[10px] font-bold uppercase"><i class="ti ti-eye"></i> Monitorizar</span>
+                  </div>
+              </div>
+          </div>
+        </div>
+
+        <div class="text-center text-xs text-slate-400 mt-4 font-medium">Ecrã 6 — Alertas preditivos e recomendações operacionais</div>
+      </div>
+
+  </div>
+</div>
+
+<script>
+function go(idx) {
+  // Esconder todos os ecrãs
+  const screens = document.querySelectorAll('.screen');
+  screens.forEach(s => s.classList.add('hidden'));
+  
+  // Mostrar o ecrã ativo
+  screens[idx].classList.remove('hidden');
+  
+  // Atualizar estilo dos botões da navbar
+  const btns = document.querySelectorAll('.nav-btn');
+  btns.forEach((b, i) => {
+    if (i === idx) {
+      b.classList.add('text-cyan-400', 'border-cyan-400', 'bg-slate-800', 'font-semibold');
+      b.classList.remove('text-slate-400', 'border-transparent', 'bg-transparent', 'hover:bg-slate-800/50', 'hover:text-slate-200');
+    } else {
+      b.classList.remove('text-cyan-400', 'border-cyan-400', 'bg-slate-800', 'font-semibold');
+      b.classList.add('text-slate-400', 'border-transparent', 'bg-transparent', 'hover:bg-slate-800/50', 'hover:text-slate-200');
+    }
+  });
+}
+</script>
+</body>
+</html>
