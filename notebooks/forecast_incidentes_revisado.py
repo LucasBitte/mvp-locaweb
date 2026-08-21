@@ -19,9 +19,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import os
+import sys
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -80,15 +82,15 @@ class Config:
 # =======================================================================================
 
 SQL_AGREGACAO = f"""
-    -- [MUDANCA 1] SUM({COL_VOLUME}) e nao COUNT(*).
-    -- A tabela gold_ml.ml_forecast_dataset nao tem uma linha por incidente: existem linhas
-    -- com {COL_VOLUME} = 2 e 3. COUNT(*) subestima o volume real.
-    SELECT DATE({COL_DATA})            AS ds,
-           SUM({COL_VOLUME})           AS y,
-           COUNT(*)                    AS n_linhas,
-           MAX({COL_DATA})             AS ultimo_evento_do_dia
-    FROM gold_ml.ml_forecast_dataset
-    GROUP BY DATE({COL_DATA})
+    -- ml.ml_forecast_dataset ja tem grao de dia (1 linha = 1 dia, {COL_VOLUME}
+    -- ja e a contagem de incidentes daquele dia) -- diferente do antigo
+    -- gold_ml.ml_forecast_dataset (grao de incidente, exigia SUM). Sem
+    -- agregacao aqui, so leitura direta.
+    SELECT {COL_DATA}                  AS ds,
+           {COL_VOLUME}                AS y,
+           1                           AS n_linhas,
+           NULL::timestamp             AS ultimo_evento_do_dia
+    FROM ml.ml_forecast_dataset
     ORDER BY 1
 """
 
@@ -104,6 +106,9 @@ def find_project_root(start: Path) -> Path:
 PROJECT_ROOT = find_project_root(
     Path(__file__).resolve().parent if "__file__" in dir() else Path.cwd()
 )
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))  # permite "from etl.db import get_engine"
+
 DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"      # fallback de entrada
 DATA_IN_DIR = DATA_RAW_DIR / "ml"                 # entrada: parquets de ingestao (gold_ml)
 DATA_ML_DIR = PROJECT_ROOT / "data" / "ml"        # saida: artefatos do modelo, em parquet
@@ -140,11 +145,8 @@ def _resolver_parquet(caminho: str | Path | None) -> Path:
 def carregar_serie(fonte: str = "parquet", caminho: str | None = None) -> pd.DataFrame:
     """Devolve a serie diaria com uma linha por dia de calendario."""
     if fonte == "sql":
-        from sqlalchemy import create_engine
-        url = (f"postgresql+psycopg2://{os.environ['RDS_USER']}:{os.environ['RDS_PASSWORD']}"
-               f"@{os.environ['RDS_HOST']}:{os.environ.get('RDS_PORT', '5432')}"
-               f"/{os.environ.get('RDS_DATABASE', 'aiops_gold')}")
-        bruto = pd.read_sql(SQL_AGREGACAO, create_engine(url))
+        from etl.db import get_engine
+        bruto = pd.read_sql(SQL_AGREGACAO, get_engine())
     else:
         p = _resolver_parquet(caminho)
         raw = pd.read_parquet(p)
@@ -497,6 +499,101 @@ def dados_diagnostico(serie: pd.DataFrame, bt: pd.DataFrame, modelo: str,
 
 
 # =======================================================================================
+# 5b. QUEBRA POR PRIORIDADE/CATEGORIA (split proporcional historico) E PERSISTENCIA
+#     Decisao explicita do projeto: nao treina um Prophet por corte -- aplica a
+#     proporcao historica de cada prioridade/categoria sobre o total previsto.
+# =======================================================================================
+
+MODELO_VERSAO_FORECAST = "prophet_regime"
+
+
+def _md5(*partes: str) -> str:
+    return hashlib.md5("|".join(partes).encode("utf-8")).hexdigest()
+
+
+def calcular_shares(engine, coluna: str, inicio: pd.Timestamp | None) -> pd.DataFrame:
+    """Fracao historica do volume por valor de `coluna` (prioridade_num ou categoria),
+    no mesmo periodo de referencia usado no treino do Prophet (recorte de regime).
+    """
+    from sqlalchemy import text
+
+    filtro = 'WHERE data_abertura >= :inicio' if inicio is not None else ""
+    sql = f"""
+        SELECT {coluna} AS valor, COUNT(*)::numeric / SUM(COUNT(*)) OVER () AS share
+        FROM ml.ml_base_features
+        {filtro}
+        GROUP BY {coluna}
+    """
+    params = {"inicio": inicio.date()} if inicio is not None else {}
+    with engine.connect() as conn:
+        return pd.read_sql(text(sql), conn, params=params)
+
+
+def persistir_previsao(engine, f: pd.DataFrame, shares_prioridade: pd.DataFrame,
+                       shares_categoria: pd.DataFrame) -> None:
+    """Grava a previsao total + quebras por prioridade/categoria em ml.fct_previsao_*.
+
+    Append (nao truncate+insert): cada origem e um run novo, mantido para poder
+    comparar previsto x realizado depois. Idempotente por origem -- se a mesma
+    origem ja tiver sido gravada, apaga essas linhas antes de reinserir.
+    """
+    from sqlalchemy import text
+
+    origem = f["origem"].iloc[0].date()
+    data_execucao = pd.Timestamp.now()
+
+    total = f[["origem", "horizonte", "ds", "yhat", "yhat_lower", "yhat_upper"]].copy()
+    total["origem"] = total["origem"].dt.date
+    total["ds"] = total["ds"].dt.date
+    total["h"] = total["horizonte"].str.replace("D+", "", regex=False).astype(int)
+    total["modelo_versao"] = MODELO_VERSAO_FORECAST
+    total["data_execucao"] = data_execucao
+    total["previsao_total_sk"] = [
+        _md5(str(o), str(d)) for o, d in zip(total["origem"], total["ds"])
+    ]
+
+    base = total[["origem", "h", "horizonte", "ds", "yhat"]]
+
+    prioridade = base.merge(shares_prioridade.rename(columns={"valor": "prioridade_num"}), how="cross")
+    prioridade["prioridade_num"] = prioridade["prioridade_num"].astype(int)
+    prioridade["yhat_prioridade"] = prioridade["yhat"] * prioridade["share"]
+    prioridade["share_historico"] = prioridade["share"]
+    prioridade["modelo_versao"] = MODELO_VERSAO_FORECAST
+    prioridade["data_execucao"] = data_execucao
+    prioridade["previsao_prioridade_sk"] = [
+        _md5(str(o), str(d), str(p)) for o, d, p in
+        zip(prioridade["origem"], prioridade["ds"], prioridade["prioridade_num"])
+    ]
+
+    categoria = base.merge(shares_categoria.rename(columns={"valor": "categoria"}), how="cross")
+    categoria["yhat_categoria"] = categoria["yhat"] * categoria["share"]
+    categoria["share_historico"] = categoria["share"]
+    categoria["modelo_versao"] = MODELO_VERSAO_FORECAST
+    categoria["data_execucao"] = data_execucao
+    categoria["previsao_categoria_sk"] = [
+        _md5(str(o), str(d), str(c)) for o, d, c in
+        zip(categoria["origem"], categoria["ds"], categoria["categoria"])
+    ]
+
+    cols_total = ["previsao_total_sk", "origem", "h", "horizonte", "ds", "yhat",
+                  "yhat_lower", "yhat_upper", "modelo_versao", "data_execucao"]
+    cols_prio = ["previsao_prioridade_sk", "origem", "h", "horizonte", "ds", "prioridade_num",
+                 "share_historico", "yhat_prioridade", "modelo_versao", "data_execucao"]
+    cols_cat = ["previsao_categoria_sk", "origem", "h", "horizonte", "ds", "categoria",
+                "share_historico", "yhat_categoria", "modelo_versao", "data_execucao"]
+
+    with engine.begin() as conn:
+        for tabela in ["fct_previsao_diaria_total", "fct_previsao_prioridade", "fct_previsao_categoria"]:
+            conn.execute(text(f"DELETE FROM ml.{tabela} WHERE origem = :o"), {"o": origem})
+
+    total[cols_total].to_sql("fct_previsao_diaria_total", engine, schema="ml", if_exists="append", index=False)
+    prioridade[cols_prio].to_sql("fct_previsao_prioridade", engine, schema="ml", if_exists="append", index=False)
+    categoria[cols_cat].to_sql("fct_previsao_categoria", engine, schema="ml", if_exists="append", index=False)
+    print(f"✅ Previsao persistida em ml.fct_previsao_* (origem={origem}, "
+          f"{len(shares_prioridade)} prioridades, {len(shares_categoria)} categorias)")
+
+
+# =======================================================================================
 # 6. EXECUCAO
 # =======================================================================================
 
@@ -611,6 +708,13 @@ def main(argv: list[str] | None = None):
     print(f.assign(**{c: f[c].round(0) for c in num}).to_string(index=False))
     print(f"total previsto para a semana: {f.yhat.sum():.0f} chamados")
     f.to_parquet(out / f"{MODELO_ARTEFATO}_forecast_d1_d7.parquet", index=False)
+
+    if args.fonte == "sql":
+        from etl.db import get_engine
+        engine_persist = get_engine()
+        shares_prioridade = calcular_shares(engine_persist, "prioridade_num", inicio)
+        shares_categoria = calcular_shares(engine_persist, "categoria", inicio)
+        persistir_previsao(engine_persist, f, shares_prioridade, shares_categoria)
 
     escritos = dados_diagnostico(serie, final, "prophet_regime", out)
     nomes = ", ".join(c.name for c in escritos)

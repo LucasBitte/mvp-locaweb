@@ -211,3 +211,66 @@ Prophet. Colunas: `data_abertura` (PK), `dia_semana_num`, `semana_ano`,
 `total_p1`..`total_p4`, `total_criticos`, `total_violacoes_sla`,
 `pct_violacao_sla`, `pressao_operacional_dia`, `score_risco_medio_dia`,
 `media_horas_resolucao`.
+
+## Saídas dos modelos de ML (schema `ml`)
+
+Populadas pelos notebooks `forecast_incidentes_revisado.py`,
+`model_clustering_kmeans_Revisado.ipynb` e `model_risk_xgboost_.ipynb`, lendo
+das marts acima e gravando no banco `fiap`.
+
+### `ml.fct_previsao_diaria_total`
+Previsão Prophet de volume total diário, D+1 a D+7. **Append** (não
+truncate+insert) — cada `origem` é uma execução nova, mantida para comparar
+previsto x realizado depois. Colunas: `previsao_total_sk` (PK), `origem`,
+`h`, `horizonte` ('D+1'..'D+7'), `ds`, `yhat`, `yhat_lower`, `yhat_upper`,
+`modelo_versao`, `data_execucao`. `UNIQUE(origem, ds)`.
+
+### `ml.fct_previsao_prioridade` / `ml.fct_previsao_categoria`
+Quebra do forecast total por prioridade/categoria via **split proporcional
+histórico** (não é um Prophet por corte — `share_historico` é a fração do
+volume histórico daquele corte, aplicada sobre `yhat` do total). Mesmas
+colunas de controle (`origem`, `h`, `horizonte`, `ds`, `modelo_versao`,
+`data_execucao`) + `prioridade_num`/`categoria`, `share_historico`,
+`yhat_prioridade`/`yhat_categoria`. `categoria` é texto simples (não FK para
+`dw.dim_produto_categoria` — grão mais fino do que a tela "Top 5 categorias"
+precisa).
+
+### `ml.dim_cluster`
+Taxonomia curada dos 4 clusters do K-Means (A-D), vinda do mockup
+`docs/design/aiops_dashboard_redesign.html`. Não é reescrita a cada execução
+do notebook — edição manual se o significado de um cluster mudar. Colunas:
+`cluster_id` (PK, 'A'-'D'), `nome_perfil`, `descricao_curta`, `tags` (CSV),
+`cor_hex`, `modelo_versao_referencia`.
+
+### `ml.fct_perfil_cluster`
+Métricas agregadas por cluster, recarregadas por completo a cada execução do
+K-Means (truncate+insert). Alimenta o gráfico de bolhas e os cards da tela
+Clusters. Colunas: `perfil_cluster_sk` (PK), `cluster_id` (FK `dim_cluster`),
+`modelo_versao`, `data_execucao`, `n_incidentes`, `pct_volume`,
+`duracao_media_horas`, `taxa_resolucao_pct`, `taxa_sla_violado_pct`.
+
+### `ml.fct_importancia_feature`
+Importância global de features do XGBoost (|SHAP| médio por coluna, ou gain
+do XGBoost se o SHAP não estiver disponível), recarregada por completo a
+cada execução. Colunas: `importancia_sk` (PK), `modelo_versao`,
+`data_execucao`, `feature`, `importance_pct`, `rank`.
+
+### `ml.fct_risco_incidente`
+Score de risco de violação de SLA por incidente (XGBoost calibrado),
+cobertura total de `dw.fct_incidentes` (41.441 linhas), recarregada por
+completo a cada execução. Colunas: `incident_sk` (PK, FK
+`dw.fct_incidentes`), `incident_id`, `modelo_versao`, `data_execucao`,
+`score_bruto`, `score_calibrado`, `threshold_aplicado`, `predicao_risco`,
+`faixa_risco` (Baixo/Moderado/Alto/Critico), `motivo_principal`,
+`escopo_modelo` (validado/extrapolado), `particao` (treino/validacao/teste/
+fora_do_escopo), `y_real` (nulo fora do escopo validado).
+
+### `ml.fct_shap_incidente`
+Contribuições SHAP por feature, só para os `TOP_N_SHAP` (30) incidentes de
+maior `score_calibrado` a cada execução — não a população toda. Alimenta o
+painel "Valores SHAP" da tela Fatores, reinterpretado como explicação dos
+incidentes de maior risco (não do forecast de volume — decisão registrada em
+`docs/modelo-dimensional.md`). Colunas: `shap_sk` (PK), `incident_sk` (FK
+`dw.fct_incidentes`), `incident_id`, `modelo_versao`, `data_execucao`,
+`feature`, `shap_value` (log-odds, sinal preservado), `direcao`
+(aumenta_risco/reduz_risco), `rank_abs`, `score`.
