@@ -20,6 +20,8 @@ data/
 *.parquet
 *.csv
 saida_forecast/
+mlruns/
+mlflow.db
 .ipynb_checkpoints/
 
 # Editor / SO

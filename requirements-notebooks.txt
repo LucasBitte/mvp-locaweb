@@ -7,3 +7,9 @@ seaborn
 missingno
 holidays
 pyarrow
+prophet
+scikit-learn
+xgboost
+shap
+mlflow
+joblib
