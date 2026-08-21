@@ -10,10 +10,10 @@
  Este script e auto-contido e executavel. Por padrao le o parquet local; troque
  FONTE = 'sql' para usar o RDS. Nenhum caminho absoluto de Windows e usado.
 
- Parquets de entrada centralizados em data/raw/ (raiz do projeto). Artefatos de saida
- (backtest, previsao, diagnostico) vao por padrao para data/raw/ml/.
+ Parquets de ingestao centralizados em data/raw/ml/ (raiz do projeto). Artefatos de saida
+ (backtest, previsao, diagnostico) vao por padrao para data/ml/, sempre em parquet.
 
- Requisitos: pandas, numpy, prophet, matplotlib  (pyarrow se usar parquet)
+ Requisitos: pandas, numpy, prophet, pyarrow. Toda saida e parquet: nenhuma imagem.
 =============================================================================================
 """
 from __future__ import annotations
@@ -33,7 +33,13 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 logging.getLogger("prophet").setLevel(logging.ERROR)
 logging.getLogger("cmdstanpy").setLevel(logging.ERROR)
 
-from prophet import Prophet  # noqa: E402
+try:
+    from prophet import Prophet  # noqa: E402
+except ModuleNotFoundError as e:  # dependencia que nao esta em requirements.txt
+    raise SystemExit(
+        "prophet nao instalado. Instale com:  pip install prophet\n"
+        "(ja consta em requirements-notebooks.txt)"
+    ) from e
 
 # ---------------------------------------------------------------------------------------
 # Parametros — tudo que era numero fixo no meio do codigo virou parametro nomeado.
@@ -42,6 +48,7 @@ from prophet import Prophet  # noqa: E402
 COL_DATA = "data_abertura"      # timestamp de abertura do incidente
 COL_VOLUME = "total_chamados"   # contador de incidentes por linha (NAO e sempre 1 — ver [MUDANCA 1])
 HORIZONTE = 7                   # D+1 .. D+7
+MODELO_ARTEFATO = "prophet"     # prefixo dos artefatos: <modelo>_<saida>.parquet
 NIVEL_INTERVALO = 0.80          # explicito: o default do Prophet e 0.80, nao 0.95
 SEED = 42
 
@@ -97,16 +104,18 @@ def find_project_root(start: Path) -> Path:
 PROJECT_ROOT = find_project_root(
     Path(__file__).resolve().parent if "__file__" in dir() else Path.cwd()
 )
-DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"
-DATA_RAW_ML_DIR = DATA_RAW_DIR / "ml"
+DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"      # fallback de entrada
+DATA_IN_DIR = DATA_RAW_DIR / "ml"                 # entrada: parquets de ingestao (gold_ml)
+DATA_ML_DIR = PROJECT_ROOT / "data" / "ml"        # saida: artefatos do modelo, em parquet
 
 #: Locais onde o parquet e procurado quando --caminho nao aponta para um arquivo existente.
 #: Evita depender do diretorio de onde o script/notebook foi disparado.
 #: data/raw/ (centralizado, raiz do projeto) tem prioridade sobre os demais.
 LOCAIS_PARQUET = [
+    DATA_IN_DIR,
     DATA_RAW_DIR,
     Path.cwd(),
-    Path.cwd() / "data" / "ml",
+    Path.cwd() / "data" / "raw" / "ml",
     Path(__file__).resolve().parent if "__file__" in dir() else Path.cwd(),
     Path("/mnt/user-data/uploads"),
 ]
@@ -435,54 +444,56 @@ def acf_residuos(bt: pd.DataFrame, modelo: str, h: int = 1, max_lag: int = 7) ->
 
 
 # =======================================================================================
-# 5. GRAFICOS DE DIAGNOSTICO
+# 5. DADOS DE DIAGNOSTICO
+#    Nao geramos imagem: cada painel do antigo grafico vira um parquet com os numeros
+#    que o alimentavam. Quem quiser o grafico plota a partir daqui, e o BI le direto.
 # =======================================================================================
 
-def graficos(serie: pd.DataFrame, bt: pd.DataFrame, modelo: str, destino: Path) -> Path:
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
+def dados_diagnostico(serie: pd.DataFrame, bt: pd.DataFrame, modelo: str,
+                      destino: Path, prefixo: str = MODELO_ARTEFATO) -> list[Path]:
+    """Grava os insumos dos diagnosticos em parquet e devolve os caminhos escritos.
 
+    Real vs previsto e residuos ja estao em <prefixo>_backtest_bruto.parquet (colunas
+    ds, h, y, yhat, erro), entao aqui ficam so os agregados que nao dao para derivar
+    sem repetir conta: a serie diaria, a ACF dos residuos e o resumo por horizonte.
+    """
     d = bt[bt.modelo == modelo]
-    fig, ax = plt.subplots(3, 2, figsize=(15, 12))
+    escritos = []
 
-    ax[0, 0].plot(serie.ds, serie.y, lw=0.9)
-    ax[0, 0].set_title("Serie diaria completa (verificar mudanca de patamar)")
+    # Painel 1: serie diaria completa
+    caminho = destino / f"{prefixo}_serie_diaria.parquet"
+    serie[["ds", "y", "dow"]].to_parquet(caminho, index=False)
+    escritos.append(caminho)
 
-    d1 = d[d.h == 1].sort_values("ds")
-    ax[0, 1].plot(d1.ds, d1.y, label="real", lw=1.5)
-    ax[0, 1].plot(d1.ds, d1.yhat, label="previsto D+1", lw=1.5, ls="--")
-    ax[0, 1].legend(); ax[0, 1].set_title("Real vs previsto (D+1, origem movel)")
-
-    ax[1, 0].scatter(d1.ds, d1.erro, s=12)
-    ax[1, 0].axhline(0, color="k", lw=0.8)
-    ax[1, 0].set_title("Residuos no tempo (D+1) — procurar deriva e vies")
-
-    ax[1, 1].hist(d.erro, bins=30)
-    ax[1, 1].axvline(0, color="k", lw=0.8)
-    ax[1, 1].set_title(f"Distribuicao dos residuos (vies medio = {d.erro.mean():.0f})")
-
+    # Painel "ACF dos residuos D+1": autocorrelacao por lag
     acf = acf_residuos(bt, modelo)
-    ax[2, 0].bar(range(1, len(acf) + 1), acf.values)
-    ax[2, 0].axhline(0, color="k", lw=0.8)
-    ax[2, 0].set_title("ACF dos residuos D+1 (>0 no lag 1 => intervalo subcobre)")
+    caminho = destino / f"{prefixo}_acf_residuos.parquet"
+    (pd.DataFrame({"lag": range(1, len(acf) + 1),
+                   "autocorrelacao": acf.values,
+                   "modelo": modelo, "horizonte": 1})
+       .to_parquet(caminho, index=False))
+    escritos.append(caminho)
 
-    mae_h = d.groupby("h").erro.apply(lambda x: x.abs().mean())
-    cob_h = d.groupby("h").apply(lambda g: 100 * ((g.y >= g.lo) & (g.y <= g.hi)).mean(),
-                                 include_groups=False)
-    ax[2, 1].plot(mae_h.index, mae_h.values, "o-", label="MAE")
-    a2 = ax[2, 1].twinx()
-    a2.plot(cob_h.index, cob_h.values, "s--", color="tab:red", label="cobertura %")
-    a2.axhline(100 * NIVEL_INTERVALO, color="tab:red", ls=":", lw=1)
-    ax[2, 1].set_title("MAE e cobertura por horizonte (linha = nivel nominal)")
-    ax[2, 1].set_xlabel("horizonte (dias)")
+    # Painel "MAE e cobertura por horizonte", mais a distribuicao dos residuos por horizonte
+    resumo = (d.groupby("h")
+                .apply(lambda g: pd.Series({
+                    "n": len(g),
+                    "MAE": g.erro.abs().mean(),
+                    "RMSE": np.sqrt((g.erro ** 2).mean()),
+                    "vies": g.erro.mean(),
+                    "erro_p05": g.erro.quantile(0.05),
+                    "erro_mediana": g.erro.median(),
+                    "erro_p95": g.erro.quantile(0.95),
+                    "cobertura%": 100 * ((g.y >= g.lo) & (g.y <= g.hi)).mean(),
+                }), include_groups=False)
+                .reset_index())
+    resumo["nivel_nominal%"] = 100 * NIVEL_INTERVALO
+    resumo["modelo"] = modelo
+    caminho = destino / f"{prefixo}_diagnostico_por_horizonte.parquet"
+    resumo.to_parquet(caminho, index=False)
+    escritos.append(caminho)
 
-    for a in ax.ravel():
-        a.grid(alpha=0.3)
-    fig.tight_layout()
-    fig.savefig(destino, dpi=110, bbox_inches="tight")
-    plt.close(fig)
-    return destino
+    return escritos
 
 
 # =======================================================================================
@@ -495,7 +506,7 @@ def main(argv: list[str] | None = None):
     p = argparse.ArgumentParser()
     p.add_argument("--fonte", default="parquet", choices=["parquet", "sql"])
     p.add_argument("--caminho", default="ml_forecast_dataset.parquet")
-    p.add_argument("--saida", default=str(DATA_RAW_ML_DIR))
+    p.add_argument("--saida", default=str(DATA_ML_DIR))
     p.add_argument("--inicio-regime", default=None,
                    help="ISO date. Se omitido, usa a quebra detectada automaticamente.")
     p.add_argument("--fim-tuning", default=None,
@@ -546,7 +557,7 @@ def main(argv: list[str] | None = None):
     bt["periodo"] = np.where(bt.origem <= fim_tuning, "tuning", "avaliacao_final")
     print(f"tuning ate {fim_tuning.date()} | avaliacao final depois disso "
           f"({bt[bt.periodo=='avaliacao_final'].origem.nunique()} origens)")
-    bt.to_parquet(out / "backtest_bruto.parquet")
+    bt.to_parquet(out / f"{MODELO_ARTEFATO}_backtest_bruto.parquet")
 
     # ---------------- metricas ----------------
     for per in ["tuning", "avaliacao_final"]:
@@ -557,6 +568,9 @@ def main(argv: list[str] | None = None):
         print(metricas_por_horizonte(s).round(0).to_string())
 
     final = bt[bt.periodo == "avaliacao_final"]
+    # Metricas da avaliacao final tambem viram parquet: e o que o BI le, sem reprocessar.
+    (metricas_gerais(final).reset_index()
+        .to_parquet(out / f"{MODELO_ARTEFATO}_metricas_avaliacao_final.parquet", index=False))
     print(f"\n{'='*88}\nERRO DO TOTAL DA SEMANA (soma D+1..D+7) — avaliacao final\n{'='*88}")
     print(erro_total_semanal(final).round(1).sort_values("MAE_semana").to_string())
 
@@ -596,14 +610,17 @@ def main(argv: list[str] | None = None):
     num = ["yhat", "yhat_lower", "yhat_upper"]
     print(f.assign(**{c: f[c].round(0) for c in num}).to_string(index=False))
     print(f"total previsto para a semana: {f.yhat.sum():.0f} chamados")
-    f.to_parquet(out / "forecast_d1_d7.parquet", index=False)
+    f.to_parquet(out / f"{MODELO_ARTEFATO}_forecast_d1_d7.parquet", index=False)
 
-    fig = graficos(serie, final, "prophet_regime", out / "diagnostico.png")
-    print(f"\nArtefatos em: {out.resolve()}  (backtest_bruto.parquet, forecast_d1_d7.parquet, {fig.name})")
+    escritos = dados_diagnostico(serie, final, "prophet_regime", out)
+    nomes = ", ".join(c.name for c in escritos)
+    print(f"\nArtefatos em: {out.resolve()}  ({MODELO_ARTEFATO}_backtest_bruto.parquet, "
+          f"{MODELO_ARTEFATO}_metricas_avaliacao_final.parquet, "
+          f"{MODELO_ARTEFATO}_forecast_d1_d7.parquet, {nomes})")
 
 
 def executar(caminho: str = "ml_forecast_dataset.parquet",
-             saida: str = str(DATA_RAW_ML_DIR),
+             saida: str = str(DATA_ML_DIR),
              fonte: str = "parquet",
              inicio_regime: str | None = None,
              fim_tuning: str | None = None):
@@ -611,7 +628,7 @@ def executar(caminho: str = "ml_forecast_dataset.parquet",
     Entrada para notebook. Equivale a chamar o script pela linha de comando.
 
         from forecast_incidentes_revisado import executar
-        executar()  # le de data/raw/ml_forecast_dataset.parquet, grava em data/raw/ml/
+        executar()  # le de data/raw/ml/ml_forecast_dataset.parquet, grava em data/ml/
 
     Para trocar de volta para o RDS:  executar(fonte="sql")
     """
