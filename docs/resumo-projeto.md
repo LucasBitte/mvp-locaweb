@@ -87,7 +87,7 @@ mvp-locaweb/
 ├── app/web/              # React + Vite + Tailwind + Recharts (esqueleto)
 ├── docs/                # Documentação
 ├── tests/                # pytest
-└── data/                 # parquets locais (bronze/ml), gitignored
+└── data/                 # parquets locais (data/raw, data/ml/<modelo>/), gitignored
 ```
 
 `main` protegida (exige PR, sem push direto), branches `feature/<descrição>`,
