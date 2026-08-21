@@ -26,6 +26,12 @@ docs/design/  Mockup de referência do dashboard (aiops_dashboard_redesign.html)
 SLA, clustering) que fundamenta este pipeline — as saídas desses modelos são a fonte
 de vários painéis do dashboard (ver `docs/design/aiops_dashboard_redesign.html`).
 
+## Documentação
+
+- [docs/dicionario-dados.md](docs/dicionario-dados.md) — colunas de todas as tabelas (fonte + modelo dimensional)
+- [docs/schema-fonte-incidentes.md](docs/schema-fonte-incidentes.md) — levantamento de `public.incidentes`
+- [docs/modelo-dimensional.md](docs/modelo-dimensional.md) — grão, adaptações e como recarregar o `dw`
+
 ## Status
 
 Projeto em construção — ver plano de execução por etapas. Documentação de setup,
