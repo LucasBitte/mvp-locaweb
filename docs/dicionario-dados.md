@@ -7,6 +7,12 @@ desenho (grão, filtros, adaptações), ver `docs/schema-fonte-incidentes.md` e
 Schemas: `public` (fonte bruta), `staging` (camada Silver), `dw` (modelo
 dimensional / star schema), `ml` (marts de features para modelos de ML).
 
+Verificado contra o schema real do banco `fiap` (via `information_schema`) em
+2026-08-21 — 100% de aderência, nenhuma tabela/coluna divergente. Para
+volumetria atual (linhas por tabela) e um catálogo executivo compacto, ver
+[`docs/schema-e-cobertura-mockup.md`](schema-e-cobertura-mockup.md), que
+também compara cada tela do mockup do dashboard com os dados aqui descritos.
+
 ## Fonte
 
 ### `public.incidentes`
