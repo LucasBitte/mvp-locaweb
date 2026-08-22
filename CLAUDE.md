@@ -8,8 +8,9 @@
 
 Pipeline de dados fim a fim para um dashboard de **AIOps de incidentes de TI**
 (Desafio Locaweb/FIAP). Fluxo: tabela bruta no Postgres → camada Silver →
-modelo dimensional (star schema) → feature marts → 3 modelos de ML (previsão
-de volume, clustering, risco de SLA) → API FastAPI → dashboard React.
+modelo dimensional (star schema) → feature marts → 4 modelos de ML (previsão
+de volume total e por equipe, clustering, risco de SLA) → API FastAPI →
+dashboard React.
 
 - Repo: [LucasBitte/mvp-locaweb](https://github.com/LucasBitte/mvp-locaweb) — branch `main` protegida, exige PR.
 - Local: `/home/fiap/mvp-locaweb`
@@ -49,7 +50,7 @@ staging.incidentes_silver      (silver — 41.441 linhas, pós-2025, esforço re
         │
         └──▶ notebook 05 ──▶ ml.ml_*     (marts de features)
                                    │
-                                   ▼  forecast / clustering / xgboost
+                                   ▼  forecast / forecast por equipe / clustering / xgboost
                               ml.fct_*   (saídas dos modelos)
 ```
 
@@ -63,7 +64,7 @@ staging.incidentes_silver      (silver — 41.441 linhas, pós-2025, esforço re
 
 Documentação completa: [`docs/dicionario-dados.md`](docs/dicionario-dados.md) (coluna a coluna) e [`docs/modelo-dimensional.md`](docs/modelo-dimensional.md) (raciocínio do star schema).
 
-## 4. Os 3 modelos de ML — o que cada um faz
+## 4. Os 4 modelos de ML — o que cada um faz
 
 | Modelo | Lê de | Grava em | Cobertura |
 |---|---|---|---|
@@ -75,15 +76,15 @@ Documentação completa: [`docs/dicionario-dados.md`](docs/dicionario-dados.md) 
 **Limitações de escopo que não podem virar mal-entendido em código futuro:**
 - Forecast por prioridade/categoria é **proporção histórica** sobre o total previsto — não é um modelo treinado por corte. Não tratar como se fosse.
 - `ml.fct_shap_incidente` explica os incidentes de maior risco individualmente, **não** o volume previsto do dia seguinte — não confundir as duas explicabilidades ao construir a tela "Fatores".
-- Metas de OLA da tela KPI (`dw.ref_meta_sla_anual`, a criar na Etapa 5) **ainda não têm fonte real** — usar os números do mockup como placeholder explícito, sinalizado como tal na UI, não como dado real.
+- Metas de OLA da tela KPI: `dw.ref_meta_sla_anual` **já existe e tem dado real** (Dicionário de Dados oficial do desafio, não placeholder do mockup) — 24 linhas, faixas por prioridade/indicador. Lookup em `etl/ref_meta_sla.py::faixa_meta_sla()`.
 
 ## 5. Estrutura do repositório
 
 ```
 mvp-locaweb/
-├── db/migrations/     # DDL versionado (022 migrations já aplicadas)
-├── etl/                # db.py (conexão via .env), transform.py (bronze -> dw, standalone)
-├── notebooks/          # 01-05 (pipeline) + os 3 modelos de ML + conexao_banco_fiap.ipynb
+├── db/migrations/     # DDL versionado (025 migrations já aplicadas)
+├── etl/                # db.py (conexão via .env), transform.py (bronze -> dw, standalone), ref_meta_sla.py (lookup de faixa de meta)
+├── notebooks/          # 01-06 (pipeline) + os 4 modelos de ML + conexao_banco_fiap.ipynb
 ├── app/api/             # FastAPI — esqueleto, ainda não construído (Etapa 5)
 ├── app/web/              # React + Vite + Tailwind + Recharts — esqueleto (Etapa 6)
 ├── docs/                # Documentação (dicionário de dados, modelo dimensional, design)
@@ -109,10 +110,9 @@ mvp-locaweb/
 ## 8. O que NUNCA fazer sem confirmação explícita
 
 - `git push --force` ou push direto em `main`.
-- Editar uma migration já aplicada (das 022 existentes) — sempre criar uma nova.
+- Editar uma migration já aplicada (das 025 existentes) — sempre criar uma nova.
 - Alterar `.env` ou qualquer credencial do banco `fiap`.
 - Rodar `DROP`/`TRUNCATE` ou qualquer operação destrutiva contra o banco `fiap` (é o banco real do projeto, não há banco de "teste" separado documentado).
-- Apresentar os placeholders de OLA (seção 4) como se fossem dados reais em qualquer entregável.
 
 ## 9. Status por etapa (fonte de verdade — atualizar aqui, não em conversa)
 
