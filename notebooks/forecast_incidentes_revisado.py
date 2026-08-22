@@ -7,11 +7,13 @@
  O QUE MUDOU EM RELACAO AO ORIGINAL (as tres alteracoes mais importantes estao comentadas
  em detalhe nos blocos marcados com  [MUDANCA 1] , [MUDANCA 2]  e  [MUDANCA 3] ).
 
- Este script e auto-contido e executavel. Por padrao le o parquet local; troque
- FONTE = 'sql' para usar o RDS. Nenhum caminho absoluto de Windows e usado.
+ Este script e auto-contido e executavel. Por padrao le direto do banco Postgres
+ `fiap`; use --fonte parquet para ler de um parquet local em vez disso. Nenhum
+ caminho absoluto de Windows e usado.
 
- Parquets de ingestao centralizados em data/raw/ml/ (raiz do projeto). Artefatos de saida
- (backtest, previsao, diagnostico) vao por padrao para data/ml/prophet/, sempre em parquet.
+ Parquets de ingestao centralizados em data/raw/ (raiz do projeto). Artefatos de
+ saida (backtest, previsao, diagnostico) vao por padrao para data/ml/prophet/,
+ sempre em parquet.
 
  Requisitos: pandas, numpy, prophet, pyarrow. Toda saida e parquet: nenhuma imagem.
 =============================================================================================
@@ -83,9 +85,8 @@ class Config:
 
 SQL_AGREGACAO = f"""
     -- ml.ml_forecast_dataset ja tem grao de dia (1 linha = 1 dia, {COL_VOLUME}
-    -- ja e a contagem de incidentes daquele dia) -- diferente do antigo
-    -- gold_ml.ml_forecast_dataset (grao de incidente, exigia SUM). Sem
-    -- agregacao aqui, so leitura direta.
+    -- ja e a contagem de incidentes daquele dia) -- nao precisa de agregacao
+    -- aqui (SUM/GROUP BY), so leitura direta.
     SELECT {COL_DATA}                  AS ds,
            {COL_VOLUME}                AS y,
            1                           AS n_linhas,
@@ -110,7 +111,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))  # permite "from etl.db import get_engine"
 
 DATA_RAW_DIR = PROJECT_ROOT / "data" / "raw"      # fallback de entrada
-DATA_IN_DIR = DATA_RAW_DIR / "ml"                 # entrada: parquets de ingestao (gold_ml)
+DATA_IN_DIR = DATA_RAW_DIR / "ml"                 # entrada: parquets de ingestao
 DATA_ML_DIR = PROJECT_ROOT / "data" / "ml" / MODELO_ARTEFATO  # saida: pasta propria do modelo
 
 #: Locais onde o parquet e procurado quando --caminho nao aponta para um arquivo existente.
@@ -142,7 +143,7 @@ def _resolver_parquet(caminho: str | Path | None) -> Path:
     )
 
 
-def carregar_serie(fonte: str = "parquet", caminho: str | None = None) -> pd.DataFrame:
+def carregar_serie(fonte: str = "sql", caminho: str | None = None) -> pd.DataFrame:
     """Devolve a serie diaria com uma linha por dia de calendario."""
     if fonte == "sql":
         from etl.db import get_engine
@@ -602,7 +603,7 @@ def main(argv: list[str] | None = None):
     """argv=None le a linha de comando. Dentro de notebook, passe a lista explicitamente
     ou use executar(...) — o argparse tentaria interpretar o argv do proprio Jupyter."""
     p = argparse.ArgumentParser()
-    p.add_argument("--fonte", default="parquet", choices=["parquet", "sql"])
+    p.add_argument("--fonte", default="sql", choices=["parquet", "sql"])
     p.add_argument("--caminho", default="ml_forecast_dataset.parquet")
     p.add_argument("--saida", default=str(DATA_ML_DIR))
     p.add_argument("--inicio-regime", default=None,
@@ -725,16 +726,16 @@ def main(argv: list[str] | None = None):
 
 def executar(caminho: str = "ml_forecast_dataset.parquet",
              saida: str = str(DATA_ML_DIR),
-             fonte: str = "parquet",
+             fonte: str = "sql",
              inicio_regime: str | None = None,
              fim_tuning: str | None = None):
     """
     Entrada para notebook. Equivale a chamar o script pela linha de comando.
 
         from forecast_incidentes_revisado import executar
-        executar()  # le de data/raw/ml/ml_forecast_dataset.parquet, grava em data/ml/
+        executar()  # le de ml.ml_forecast_dataset no banco fiap, grava em data/ml/
 
-    Para trocar de volta para o RDS:  executar(fonte="sql")
+    Para ler de um parquet local em vez do banco:  executar(fonte="parquet")
     """
     argv = ["--fonte", fonte, "--caminho", str(caminho), "--saida", str(saida)]
     if inicio_regime:

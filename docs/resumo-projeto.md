@@ -116,7 +116,7 @@ python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 
 # 3. Pipeline, em ordem (migrations já aplicadas no banco fiap)
 jupyter nbconvert --to notebook --execute --inplace notebooks/03_bronze_silver_transformacao.ipynb
-jupyter nbconvert --to notebook --execute --inplace notebooks/04_dbt_transform_silver_to_gold_marts.ipynb
+jupyter nbconvert --to notebook --execute --inplace notebooks/04_dw_star_schema.ipynb
 jupyter nbconvert --to notebook --execute --inplace notebooks/05_ml_feature_marts.ipynb
 python notebooks/forecast_incidentes_revisado.py --fonte sql
 jupyter nbconvert --to notebook --execute --inplace notebooks/model_clustering_kmeans_Revisado.ipynb

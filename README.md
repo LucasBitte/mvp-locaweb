@@ -4,11 +4,10 @@ Pipeline de dados e dashboard de incidentes de TI: da tabela bruta de chamados n
 banco Postgres `fiap` até um modelo dimensional (star schema) e uma aplicação web
 com painéis interativos.
 
-Continuação do projeto de ITSM/AIOps deste repositório de notebooks (previsão de
-volume com Prophet, classificação de risco de SLA com XGBoost, clustering de
-incidentes com K-Means) — o modelo dimensional aqui formaliza a convenção de
-surrogate key (`MD5(COALESCE(campo::text,''))`) e os nomes de tabela (`dim_tempo`,
-`fct_ola_risk`) já cogitados nesse projeto original.
+Pipeline de ITSM/AIOps completo: previsão de volume com Prophet, classificação de
+risco de SLA com XGBoost, clustering de incidentes com K-Means. O modelo
+dimensional usa surrogate keys `MD5(COALESCE(campo::text,''))` e convenção de
+nomes `dim_*`/`fct_*`.
 
 ## Estrutura
 

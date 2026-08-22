@@ -1,7 +1,6 @@
 """public.incidentes -> modelo dimensional (schema dw).
 
-Replica a camada Silver + o star schema do projeto original (AWS: S3 bronze/
-silver -> dbt sobre RDS), adaptado para ler direto de public.incidentes no
+Replica a camada Silver + o star schema, lendo direto de public.incidentes no
 banco fiap. Ver db/migrations/008_fct_incidentes.sql para as adaptações de
 regra feitas nesta migração (threshold da heurística de P2, fechado_sem_tecnico,
 COALESCE nas chaves MD5).
