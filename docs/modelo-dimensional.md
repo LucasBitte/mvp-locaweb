@@ -87,12 +87,22 @@ atualizadas via `UPDATE` direto (não truncate+insert — ver nota abaixo),
 04 foram corrigidos na fonte para não reintroduzir o valor errado numa
 próxima recarga.
 
-**`ml.*` não foi tocado nesta correção.** `ml.ml_base_features.excedeu_tempo_esperado`
-e `ml.ml_sla_classification_dataset.target_excedeu_tempo` continuam com o
-threshold antigo — essa é justamente a coluna usada como rótulo de treino do
-XGBoost (`ml.fct_risco_incidente`), então corrigi-la exige retreinar o
-modelo, não só recalcular a mart. Decisão registrada: retreino fica para uma
-tarefa separada.
+**`ml.*` — resolvido em 2026-08-22.** `ml.ml_base_features.excedeu_tempo_esperado`
+e `ml.ml_sla_classification_dataset.target_excedeu_tempo` (notebook 05,
+célula 7) foram corrigidos para os thresholds oficiais — essa é justamente a
+coluna usada como rótulo de treino do XGBoost, então a correção exigiu
+retreinar o modelo, não só recalcular a mart. Sequência executada:
+`05_ml_feature_marts.ipynb` → `model_clustering_kmeans_Revisado.ipynb` →
+`model_risk_xgboost_.ipynb`, nessa ordem, ponta a ponta (0 erros nos três).
+Distribuição de `target_excedeu_tempo` por prioridade após a correção bate
+exatamente com a de `dw.fct_incidentes.excedeu_tempo_esperado` (mesmo
+threshold agora nos dois lugares). `ml.fct_perfil_cluster`/`ml.fct_risco_incidente`/
+`ml.fct_importancia_feature`/`ml.fct_importancia_conceito`/`ml.fct_shap_incidente`
+recarregados com `data_execucao` fresco — cluster K-Means não muda
+(`excedeu_tempo_esperado` não é feature de treino do K-Means, só estatística
+pós-hoc), a importância de conceito no XGBoost sim (novo rótulo, novo
+ranking: "Prioridade do chamado" segue líder, mas "Categoria e triagem"
+sobe para 2º lugar).
 
 **Bug de infraestrutura descoberto durante a correção — ~~resolvido em
 2026-08-22~~**: `TRUNCATE dw.fct_incidentes` (usado tanto por
