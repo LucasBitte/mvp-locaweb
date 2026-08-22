@@ -14,7 +14,7 @@ dashboard React.
 
 - Repo: [LucasBitte/mvp-locaweb](https://github.com/LucasBitte/mvp-locaweb) — branch `main` protegida, exige PR.
 - Local: `/home/fiap/mvp-locaweb`
-- Dashboard-alvo (mockup de referência): `docs/design/aiops_dashboard_redesign.html` — 6 telas: Painel, Detalhe, KPI, Fatores, Clusters, Alertas.
+- Dashboard-alvo: 6 telas — Painel, Detalhe, KPI, Fatores, Clusters, Alertas — já implementadas como React real em `app/web/src/components/screens/` (2026-08-22), com dado estático/exemplo (mesmos números reais das Fases 1-13) até a Etapa 5 (API) existir. O mockup original (`docs/design/aiops_dashboard_redesign.html`) foi removido do repo; a referência de design agora é o projeto Claude Design "AIOps Dashboard.dc.html" (`claude.ai/design/p/63defcd6-35eb-4d1e-983f-a73f61be15d2`), importado via `DesignSync`/`/design-login`.
 - Banco: Postgres, database `fiap`, credenciais via `.env` (não versionado).
 
 ## 2. Comandos essenciais
@@ -31,11 +31,19 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/04_dw_star_schema.
 jupyter nbconvert --to notebook --execute --inplace notebooks/05_ml_feature_marts.ipynb
 python notebooks/forecast_incidentes_revisado.py --fonte sql
 python notebooks/forecast_equipe.py --fonte sql       # depende do passo anterior (mesma origem)
+python notebooks/pressao_equipe.py                    # depende do passo anterior (le ml.fct_previsao_grupo)
+python notebooks/forecast_produto.py                  # depende de forecast_incidentes_revisado.py (le ml.fct_previsao_diaria_total)
+python notebooks/recorrencia.py                       # independente — le direto de dw.fct_incidentes
 jupyter nbconvert --to notebook --execute --inplace notebooks/model_clustering_kmeans_Revisado.ipynb
 jupyter nbconvert --to notebook --execute --inplace notebooks/model_risk_xgboost_.ipynb
+python notebooks/diagnostico_kmeans_k.py               # read-only, nao altera ml.dim_cluster/fct_perfil_cluster
 
 # testes
 ./venv/bin/pytest tests/
+
+# dashboard React (app/web/) — 6 telas já implementadas, dado estático por enquanto
+cd app/web && npm install && npm run dev     # http://localhost:5173
+cd app/web && npm run build                  # tsc -b && vite build
 ```
 
 ## 3. Arquitetura de dados (mapa mental)
@@ -78,6 +86,31 @@ Documentação completa: [`docs/dicionario-dados.md`](docs/dicionario-dados.md) 
 - `ml.fct_shap_incidente` explica os incidentes de maior risco individualmente, **não** o volume previsto do dia seguinte — não confundir as duas explicabilidades ao construir a tela "Fatores".
 - Metas de OLA da tela KPI: `dw.ref_meta_sla_anual` **já existe e tem dado real** (Dicionário de Dados oficial do desafio, não placeholder do mockup) — 24 linhas, faixas por prioridade/indicador. Lookup em `etl/ref_meta_sla.py::faixa_meta_sla()`.
 
+**Lacunas fechadas em 2026-08-22 (PLAN.md Fases 1-5/10/12/13 — detalhes lá):**
+- Default analítico das telas Painel/Detalhe/Alertas = **P2 + P3** (78,9% do volume real, validado). Threshold de SLA sempre de `dw.dim_prioridade.threshold_sla_horas` (P2=4h/P3=12h, corrigido em 2026-08-21).
+- Pressão operacional por equipe: `ml.fct_pressao_equipe` (migration 026, script `notebooks/pressao_equipe.py`) — `pressao_relativa_pct = ((yhat_previsto - media_historica_diaria) / media_historica_diaria) * 100` contra o próprio histórico da equipe. **Nunca** é capacidade real, headcount ou saturação contratual.
+- Split por produto: `ml.fct_previsao_produto` (migration 027, script `notebooks/forecast_produto.py`) — mesma técnica de proporção histórica de `fct_previsao_categoria`.
+- Recorrência: `dw.fct_recorrencia_operacional` (migration 028, script `notebooks/recorrencia.py`) — janela móvel 30d vs. 30d anteriores, 4 granularidades (produto/categoria/produto+categoria/categoria+subcategoria); classificação combina volume com regularidade (`cobertura_dias_atual_pct`), não é só "volume alto".
+- K-Means: diagnóstico `k=2..8` executado (read-only, `notebooks/diagnostico_kmeans_k.py`) — **sem vencedor claro** (silhouette máximo em k=2, Davies-Bouldin mínimo em k=8); `k=4` em produção fica em posição intermediária, sem defesa estatística forte nem motivo para trocar. PCA(n_components=3) confirmado explicando só **39,95%** de variância (comentário do notebook dizia "95%") — não corrigido (mudaria o modelo em produção; checkpoint humano). Ver `docs/metricas-validacao.md`.
+- EDA formal: `docs/eda-consolidada.md`. Métricas de validação consolidadas (Prophet/XGBoost/K-Means, com 3 achados que exigem decisão humana — Prophet não bate o baseline simples, XGBoost não atinge a meta de AUC-ROC 0,85, K-Means sem k ótimo claro): `docs/metricas-validacao.md`.
+
+**Dashboard React implementado (2026-08-22, fora da numeração de fases do PLAN.md — adiantado a pedido):**
+- As 6 telas (`app/web/src/components/screens/`) foram portadas 1:1 do projeto Claude Design
+  "AIOps Dashboard.dc.html" (`claude.ai/design/p/63defcd6-35eb-4d1e-983f-a73f61be15d2`), importado via
+  `DesignSync`/`/design-login`. Fidelidade visual confirmada rodando os 6 tabs num Chromium headless
+  (Playwright) — zero erros de console, `tsc -b` e `npm run build` limpos.
+- Dado ainda **estático** (`src/data/dashboardData.ts`) — mesmos números reais das Fases 1-13 desta
+  sessão (pressão por equipe, recorrência, splits P2/P3 e produto, faixas de meta, SHAP, clusters),
+  não fabricados, mas fixos até a Etapa 5 existir. Selo do header diz "DADOS DE EXEMPLO · FASE 15",
+  nunca "mockup"/dado real — não remover esse selo antes de existir uma API de verdade por trás.
+- Cada tela chama funções `computeXxx()` puras em `dashboardData.ts` — quando a Etapa 5 (API) existir,
+  a troca é só essas chamadas por `fetch`/hooks; o JSX das telas não muda.
+
+**Lacunas ainda abertas (fora do escopo desta rodada — Fases 6-9/11/14/16 do `PLAN.md`):**
+- Endpoints FastAPI servindo dado real para as 6 telas (Etapa 5) — a Etapa 6 (UI) já está adiantada,
+  mas continua consumindo dado estático até a API existir.
+- Pin de versões em `requirements.txt`/`requirements-notebooks.txt` (checkpoint humano, Anexo A/ML-3).
+
 ## 5. Estrutura do repositório
 
 ```
@@ -86,7 +119,7 @@ mvp-locaweb/
 ├── etl/                # db.py (conexão via .env), transform.py (bronze -> dw, standalone), ref_meta_sla.py (lookup de faixa de meta)
 ├── notebooks/          # 01-06 (pipeline) + os 4 modelos de ML + conexao_banco_fiap.ipynb
 ├── app/api/             # FastAPI — esqueleto, ainda não construído (Etapa 5)
-├── app/web/              # React + Vite + Tailwind + Recharts — esqueleto (Etapa 6)
+├── app/web/              # React + Vite + Tailwind — 6 telas implementadas (dado estático, Etapa 6 parcial)
 ├── docs/                # Documentação (dicionário de dados, modelo dimensional, design)
 ├── tests/                # pytest
 └── data/                 # parquets locais (bronze/ml), gitignored
@@ -122,8 +155,13 @@ mvp-locaweb/
 | 2 | Modelo dimensional (`dw.*`) | ✅ |
 | 3 | Marts de features (`ml.ml_*`) | ✅ |
 | 4 | Modelos de ML rodando contra o banco + output real (`ml.fct_*`) | ✅ |
-| 5 | API FastAPI servindo as 6 telas do mockup | ⬜ **próximo passo** |
-| 6 | Dashboard React consumindo a API | ⬜ |
+| 5 | API FastAPI servindo as 6 telas | ⬜ **próximo passo** |
+| 6 | Dashboard React — 6 telas implementadas, consumindo dado estático (aguarda Etapa 5 para dado real) | 🟡 |
+
+> Antes de iniciar a Etapa 5, ver `PLAN.md` — plano de fechamento de lacunas
+> frente ao desafio (P2/P3 default, pressão por equipe, recorrência, EDA
+> formal, métricas de validação consolidadas, diagnóstico de k do K-Means)
+> mais o anexo de governança/QA de ML (Agent Skills).
 
 ## 10. Erros recorrentes já corrigidos (adicionar aqui sempre que acontecer de novo)
 
@@ -134,7 +172,11 @@ mvp-locaweb/
 - Dicionário de dados: `docs/dicionario-dados.md`
 - Raciocínio do modelo dimensional: `docs/modelo-dimensional.md`
 - Forecast por equipe (`ml.fct_previsao_grupo`, arquitetura A/B/C): `docs/forecast-por-equipe.md`
-- Mockup do dashboard-alvo: `docs/design/aiops_dashboard_redesign.html`
+- Plano de fechamento de lacunas do desafio (fases, matriz das 6 telas, anexo de governança de ML): `PLAN.md`
+- EDA consolidada (8 evidências, Achado/Impacto/Decisão): `docs/eda-consolidada.md`
+- Métricas de validação consolidadas (Prophet/XGBoost/K-Means, com achados que exigem decisão humana): `docs/metricas-validacao.md`
+- Changelog das Fases 1-5/10/12/13 (tabelas novas, resultados reais): `docs/changelog-fechamento-lacunas-2026-08-22.md`
+- Dashboard React (6 telas, dado estático): `app/web/src/components/screens/` — dados em `app/web/src/data/dashboardData.ts`; design de origem no projeto Claude Design "AIOps Dashboard.dc.html" (`claude.ai/design/p/63defcd6-35eb-4d1e-983f-a73f61be15d2`)
 
 ## 12. Operações aprovadas e proibidas (todos os modos)
 
@@ -192,4 +234,4 @@ esperada do projeto.
   é a exceção que deve gerar pergunta.
 
 ---
-*Última atualização: 2026-08-22.*
+*Última atualização: 2026-08-22 (dashboard React das 6 telas implementado).*
