@@ -270,6 +270,37 @@ colunas de controle (`origem`, `h`, `horizonte`, `ds`, `modelo_versao`,
 `dw.dim_produto_categoria` — grão mais fino do que a tela "Top 5 categorias"
 precisa).
 
+### `ml.fct_previsao_grupo`
+Previsão de volume diário por equipe (`grupo_designado`), D+1 a D+7,
+populada por `notebooks/forecast_equipe.py` (roda depois de
+`forecast_incidentes_revisado.py --fonte sql`, mesma `origem`). Diferente de
+`fct_previsao_prioridade`/`fct_previsao_categoria`, aqui **nem toda linha é
+split proporcional** — a arquitetura é híbrida conforme a viabilidade de
+série diária de cada equipe (corte e detalhamento completo em
+`docs/modelo-dimensional.md`), e a coluna `metodo` diz qual técnica gerou
+aquela linha:
+- `'prophet_individual'` — modelo Prophet próprio da equipe (Grupo A + parte
+  do Grupo B), mesma metodologia/hiperparâmetros de base do forecast total.
+- `'prophet_semanal'` — Prophet treinado na soma semanal da equipe,
+  distribuído pelos 7 dias via share histórico de dia-da-semana da própria
+  equipe (Grupo B, só quando o diário perde do melhor baseline).
+- `'split_proporcional'` — mesma técnica de `fct_previsao_categoria`:
+  `share_historico` da equipe aplicado sobre o `yhat` de
+  `ml.fct_previsao_diaria_total` (Grupo C, sem modelo dedicado — série
+  diária inviável). **Não é uma previsão dedicada, é uma estimativa
+  derivada** — precisa ficar visível como tal em qualquer consumo (API,
+  dashboard), não só implícita no dado.
+
+Colunas: `previsao_grupo_sk` (PK), `origem`, `h`, `horizonte` ('D+1'..'D+7'),
+`ds`, `dim_grupo_sk` (FK `dw.dim_grupo`), `yhat`, `yhat_lower` (nulo para
+`split_proporcional` — sem intervalo de incerteza próprio), `yhat_upper`
+(idem), `metodo`, `modelo_versao`, `data_execucao`. `UNIQUE(origem, ds,
+dim_grupo_sk)`. A soma de `yhat` por `(origem, ds)` entre as 16 equipes
+**não é esperada bater exatamente** com o `yhat` de
+`fct_previsao_diaria_total` — Grupo A/B usam modelos independentes, não
+splits do total (divergência de dezenas de % é normal; só investigar se
+dobrar ou cair pela metade).
+
 ### `ml.dim_cluster`
 Taxonomia curada dos 4 clusters do K-Means (A-D), vinda do mockup
 `docs/design/aiops_dashboard_redesign.html`. Não é reescrita a cada execução

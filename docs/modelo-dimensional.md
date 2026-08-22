@@ -182,6 +182,106 @@ Etapa 4. O que falta não é decidir a metodologia, é **implementar o
 endpoint** — trabalho da Etapa 5, com checkpoint humano próprio já definido
 no plano.
 
+## `ml.fct_previsao_grupo` — corte A/B/C por equipe (2026-08-22)
+
+O desafio pede explicitamente previsão de demanda **por equipe**
+(`dw.dim_grupo`, 16 equipes), para evitar sobrecarga. Até aqui só existia
+forecast de volume total mais dois splits proporcionais (prioridade,
+categoria) — nenhuma quebra por equipe. Diferente desses dois splits, uma
+quebra por equipe de fato precisa refletir que equipes grandes têm série
+diária modelável e equipes pequenas não — por isso a arquitetura é
+**híbrida**, não um split único para as 16.
+
+### Corte de viabilidade (investigação em `notebooks/06_forecast_investigacao_equipe.ipynb`)
+
+Fonte: `ml.ml_base_features` (mesma linhagem de `ml.ml_forecast_dataset`,
+que já alimenta o Prophet do total — não `dw.fct_incidentes`, que teve
+divergência de threshold identificada na correção de SLA acima). Agregação
+diária por `(grupo_designado, data_abertura)` com calendário completo
+zero-preenchido, 2025-01-01 a 2025-12-31.
+
+Métrica de corte: **média diária de incidentes/equipe**, com `% de dias
+zerados` e `coeficiente de variação` (desvio padrão / média) como
+desempate — dois cotovelos claros nos dados:
+- entre `Team09` (7,94 inc./dia, 1,92% dias zerados) e `Team12` (2,44
+  inc./dia, 35,07% dias zerados) — queda de ~3,25× no volume médio;
+- entre `Team02` (1,29 inc./dia, 38,08% dias zerados) e `Team10` (0,94
+  inc./dia, 71,23% dias zerados) — a partir daqui a maioria dos dias não
+  tem chamado algum (CV chega a 11,16 em `Team15`).
+
+| Grupo | Critério | Equipes | Técnica |
+|---|---|---|---|
+| A | média diária ≥ 5 | `Team14`, `Team11`, `Team05`, `Team09` | Prophet individual |
+| B | 1 ≤ média diária < 5 | `Team12`, `Team03`, `Team17`, `Team02` | Prophet diário, semanal só se necessário |
+| C | média diária < 1 | `Team10`, `Team16`, `Team01`, `Team15`, `Team07`, `Team08`, `Team04`, `Team06` | split proporcional |
+
+### Achado: `Team05` e o "storm day" (não é bug)
+
+`Team05` tinha CV=1,29 (desvio padrão > média) na investigação, sinal de
+outlier. Investigação (`ml.ml_base_features`, coluna `incidente_pai`) antes
+de treinar essa equipe: os dias de maior volume são dominados por um único
+incidente-pai gerando uma rajada de filhos no mesmo dia, para a mesma
+equipe — ex.: 2025-06-26, `INC8445074` sozinho gerou 227 dos 270 chamados
+do dia (84%). Isso se repete em 22 dias distintos do ano
+(`notebooks/forecast_equipe.py`, `detectar_storm_days`, regra: um pai
+não-`'Independente'` ≥40% do volume do dia E dia ≥2× a mediana diária da
+equipe), cada vez via um pai **diferente e não relacionado** — não é bug de
+atribuição de `grupo_designado`, é um padrão operacional real e recorrente,
+mas **não é um evento de calendário fixo** (datas diferentes a cada vez),
+então não é um "feriado" anual verdadeiro.
+
+**Tratamento aplicado**: os dias detectados entram como `holidays` do
+Prophet (data avulsa, `lower_window=0`/`upper_window=0`, sem ocorrência
+futura) — absorve o choque pontual sem distorcer a tendência/changepoints
+do modelo e sem projetar o efeito para o futuro (mecanismo aplicado a todas
+as equipes de Grupo A e às de Grupo B que ficam diárias, com piso mais
+estrito de `n_pai ≥ 10` nas de Grupo B para não overfitar ruído em equipes
+de mediana baixa).
+
+### Grupo B: diário vs. semanal, decidido por equipe
+
+Reaproveita o veredito já existente no script do forecast total (margem de
+±5% de MAE contra o melhor baseline). Só cai para semanal quando o diário
+"PERDE PARA" claramente — `"EMPATA"`/`"SUPERA"` mantêm diário:
+
+| Equipe | Veredito diário | Decisão |
+|---|---|---|
+| `Team12` | SUPERA (-6,3%) | diário |
+| `Team03` | PERDE PARA (+11,3%) | **semanal** |
+| `Team17` | SUPERA (-7,5%) | diário |
+| `Team02` | EMPATA (-0,5%) | diário |
+
+`Team03` foi a única a cair para o fallback semanal: Prophet sobre a soma
+semanal, distribuído pelos 7 dias via share histórico de dia-da-semana da
+própria equipe (intervalo diário escala a largura do intervalo semanal
+pelo mesmo share, não o limite bruto).
+
+### Validação — Grupo A (holdout, origem móvel)
+
+| Equipe | MAE (Prophet) | WAPE% | Veredito vs. melhor baseline |
+|---|---|---|---|
+| `Team14` | 16,89 | 32,6% | EMPATA (+0,6%) |
+| `Team11` | 5,72 | 29,1% | EMPATA (-1,2%) |
+| `Team05` | 11,11 | 62,8% | EMPATA (-4,2%) |
+| `Team09` | 2,83 | 42,3% | SUPERA (-5,7%) |
+
+Nenhuma equipe do Grupo A supera o baseline por margem folgada — três
+empatam com `mediana_dow_4sem` dentro de ±5%. Isso é esperado: o Prophet
+ainda ganha em cobertura de intervalo (76-92%) e em RMSE (picos), mas o
+volume real por equipe é mais ruidoso que o total agregado. Decisão
+mantida: mesmo empatando em MAE puro, Prophet é a única técnica que produz
+intervalo de incerteza (`yhat_lower`/`yhat_upper`) por equipe — o baseline
+de mediana não produz.
+
+**Checagem de soma** (mesma origem, D+1..D+7): soma das 16 equipes ficou
+entre -28% e +6% do `yhat` de `fct_previsao_diaria_total` por dia — dentro
+do esperado (Grupo A/B usam modelos independentes, não são split do total),
+sem sinal de bug (não dobrou nem caiu pela metade em nenhum dia).
+
+**Fora de escopo**: `dw.dim_produto_categoria`-style granularidade cruzada
+equipe×categoria/prioridade não foi avaliada — cada equipe tem seu próprio
+`yhat` de volume total, sem quebra adicional por corte.
+
 ## Caveats de qualidade de dado (herdados da fonte, não corrigidos)
 
 - `duracao_min`/`duracao_horas` têm outliers extremos (ver
