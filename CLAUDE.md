@@ -133,6 +133,7 @@ mvp-locaweb/
 
 - Dicionário de dados: `docs/dicionario-dados.md`
 - Raciocínio do modelo dimensional: `docs/modelo-dimensional.md`
+- Forecast por equipe (`ml.fct_previsao_grupo`, arquitetura A/B/C): `docs/forecast-por-equipe.md`
 - Mockup do dashboard-alvo: `docs/design/aiops_dashboard_redesign.html`
 
 ## 12. Operações aprovadas e proibidas (todos os modos)
