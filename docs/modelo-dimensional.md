@@ -1,21 +1,20 @@
 # Modelo dimensional — schema `dw` (banco `fiap`)
 
-Adaptado do star schema do projeto original em AWS (`notebooks/04_dbt_transform_silver_to_gold_marts.ipynb`),
-substituindo S3 bronze/silver + dbt sobre RDS por leitura direta de
-`public.incidentes` + `etl/transform.py` (SQL puro + Python, sem dbt).
+Construído a partir de `public.incidentes` via `notebooks/04_dw_star_schema.ipynb`
+(SQL puro via SQLAlchemy) e `etl/transform.py` (equivalente em pandas) — os
+dois implementam a mesma lógica e devem ser mantidos em paridade.
 
 ## Grão da fato
 
 **`dw.fct_incidentes`: 1 linha = 1 incidente (chamado)** que exigiu esforço
 humano real, aberto a partir de 2025-01-01.
 
-Filtros aplicados na carga (mesmos do projeto original):
+Filtros aplicados na carga:
 - `status <> 'Sem Intervenção'` — remove alertas de monitoramento que se
   autorresolvem (~65% da tabela bruta, ~81k/122k linhas).
 - `aberto >= '2025-01-01'`.
 
-Resultado: 122.543 linhas brutas → **41.441 linhas na fato** (bate com o
-volume reportado pelo notebook original rodando sobre a base AWS).
+Resultado: 122.543 linhas brutas → **41.441 linhas na fato**.
 
 ## Dimensões
 
@@ -28,25 +27,28 @@ volume reportado pelo notebook original rodando sobre a base AWS).
 | `dim_prioridade` | prioridade_num, com bucket/criticidade/threshold_sla_horas | 5 |
 | `dim_abertura` | timestamp distinto de abertura (turno, hora, fora do horário comercial) | 41.364 |
 
-## Adaptações em relação ao projeto original
+## Decisões de design e correções
 
-1. **Corte de histórico**: mantido `aberto >= 2025-01-01`, replicando o
-   original (decisão do usuário — descarta ~1.100 linhas de 2023-2024).
-2. **`fechado_sem_tecnico`**: mantida a regra literal do original
-   (`codigo_fechamento IN ('Resolvido pelo Usuário','Sem Descrição')`).
-   Esse vocabulário não existe em `public.incidentes` (aqui os códigos são
-   outros: "Falha de Aplicação", "Sem retorno do solicitante" etc.) — a
-   coluna é sempre `False` nesta base. Mantida por fidelidade à regra
-   original, coberta por teste (`test_fechado_sem_tecnico_vocabulario_local_sempre_false`).
-3. **Heurística de `target_risco_sla` (camada 2)**: ~~corrigida para usar
-   8h como threshold de P2~~ — **essa "correção" estava errada, revertida em
+1. **Corte de histórico**: `aberto >= 2025-01-01` (decisão do usuário —
+   descarta ~1.100 linhas de 2023-2024, período sem esforço operacional
+   representativo).
+2. **`fechado_sem_tecnico`**: regra `codigo_fechamento IN ('Resolvido pelo
+   Usuário','Sem Descrição')`. Esse vocabulário não existe em
+   `public.incidentes` (aqui os códigos são outros: "Falha de Aplicação",
+   "Sem retorno do solicitante" etc.) — a coluna é sempre `False` nesta
+   base. Mantida por consistência com o teste automatizado
+   (`test_fechado_sem_tecnico_vocabulario_local_sempre_false`), que existe
+   justamente para deixar esse comportamento explícito em vez de um valor
+   morto silencioso.
+3. ~~Heurística de `target_risco_sla` (camada 2) corrigida para usar 8h como
+   threshold de P2~~ — **essa "correção" estava errada, revertida em
    2026-08-21.** Ver seção "Correção de thresholds de SLA" abaixo.
 4. **Chaves MD5 com COALESCE consistente**: dimensão e fato usam a mesma
    fórmula de chave (incluindo o tratamento de nulos em produto/categoria/
-   subcategoria e status/codigo_fechamento). O original computava a chave
-   de forma diferente na dimensão e na fato para esses casos, o que geraria
-   FK nula para ~63% das linhas (produto/categoria nulos). Corrigido — 0
-   FKs órfãs nas 6 dimensões, verificado após a carga.
+   subcategoria e status/codigo_fechamento). Uma versão anterior computava a
+   chave de forma diferente na dimensão e na fato para esses casos, o que
+   geraria FK nula para ~63% das linhas (produto/categoria nulos). Corrigido
+   — 0 FKs órfãs nas 6 dimensões, verificado após a carga.
 
 ## Correção de thresholds de SLA (2026-08-21)
 
@@ -63,14 +65,15 @@ estavam com valores incorretos desde a construção original do `dw`.
 | 5 - Muito Baixa | sem meta (`NULL`) | **96h** |
 
 **Causa raiz**: o dict `SLA_THRESHOLD_HORAS = {1: 4, 2: 8, 3: 24, 4: 72}`
-(`etl/transform.py`, replicado em SQL no notebook 04) foi definido sem
-conferir contra o Dicionário de Dados oficial do desafio. O projeto AWS
-original já usava o valor certo de P2 (4h) na heurística de
-`target_risco_sla` (camada 2, `notebooks/03_bronze_silver_transformacao.ipynb`)
-— mas ao montar o `dw` nesta adaptação, esse heurístico foi "corrigido" para
-8h **na direção errada**, achando que o `threshold_sla_horas` de
-`dim_prioridade` (que já estava errado) era a fonte da verdade. O erro só
-existia em `dw.*`: `ml.ml_base_features.target_risco_sla` lê
+(`etl/transform.py`, replicado em SQL no notebook `04_dw_star_schema.ipynb`)
+foi definido sem conferir contra o Dicionário de Dados oficial do desafio.
+Uma camada anterior do pipeline (a heurística da Silver) já usava o valor
+certo de P2 (4h) para `target_risco_sla` (camada 2,
+`notebooks/03_bronze_silver_transformacao.ipynb`) — mas ao montar o `dw`
+nesta adaptação, esse heurístico foi "corrigido" para 8h **na direção
+errada**, achando que o `threshold_sla_horas` de `dim_prioridade` (que já
+estava errado) era a fonte da verdade. O erro só existia em `dw.*`:
+`ml.ml_base_features.target_risco_sla` lê
 `staging.incidentes_silver.Target_Risco_SLA` sem recalcular, então sempre
 teve o valor de P2 correto (4h); já `excedeu_tempo_esperado`/
 `target_excedeu_tempo` (recalculado tanto em `dw.fct_incidentes` quanto em

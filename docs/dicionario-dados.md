@@ -164,8 +164,7 @@ determinística (não é saída de ML).
 
 ## Marts de features para ML (schema `ml`)
 
-Espelham as antigas marts dbt do projeto AWS (mesma estrutura dos parquets em
-`data/raw/`). Populadas por `notebooks/05_ml_feature_marts.ipynb` a partir de
+Populadas por `notebooks/05_ml_feature_marts.ipynb` a partir de
 `staging.incidentes_silver`. **Divergências de `dw.fct_incidentes`**:
 - `target_risco_sla`/`score_risco_operacional` aqui usam o valor já calculado
   pela Silver, sem o clamp final de `-1`→`0` que `dw.fct_incidentes` aplica —
