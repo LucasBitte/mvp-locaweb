@@ -84,9 +84,9 @@ gap estrutural).
 | Elemento visual | Fonte real | Status | Observação |
 |---|---|---|---|
 | Card P2 "previstos amanhã" | `ml.fct_previsao_prioridade` (`prioridade_num=2`, D+1) | ✅ | |
-| Card P2 "SLA 4h" | `dw.dim_prioridade.threshold_sla_horas` | ⚠️ **divergência** | valor real de P2 é **8h**, não 4h — a Etapa 2 corrigiu essa heurística explicitamente (ver `docs/modelo-dimensional.md`). O mockup usa o valor antigo/errado. |
+| Card P2 "SLA 4h" | `dw.dim_prioridade.threshold_sla_horas` | ✅ | o mockup estava certo — **4h é o valor oficial**. `dw.dim_prioridade` tinha 8h por um bug (dict de threshold nunca conferido contra o Dicionário de Dados oficial), corrigido em 2026-08-21 (ver `docs/modelo-dimensional.md`). |
 | Card P2 "72% do limite mensal" | `dw.ref_meta_sla_anual` | ❌ | tabela não existe; além disso a meta do mockup é **anual** (31/ano), não mensal — precisa decidir como derivar um % mensal a partir de uma meta anual |
-| Card P3 "SLA 12h" | `dw.dim_prioridade.threshold_sla_horas` | ⚠️ **divergência** | valor real de P3 é **24h**, não 12h |
+| Card P3 "SLA 12h" | `dw.dim_prioridade.threshold_sla_horas` | ✅ | o mockup estava certo — **12h é o valor oficial** (real anterior era 24h, mesmo bug corrigido em 2026-08-21) |
 | "Top 5 categorias — volume previsto amanhã" | `ml.fct_previsao_categoria` (D+1, top 5 por `yhat_categoria`) | ✅ | 987 linhas já populadas, cobre várias categorias/dias |
 
 ### Ecrã 3 — KPI
@@ -131,11 +131,11 @@ gap estrutural).
    mensal) e do Ecrã 3 (meta anual, % quebrado, % tratado, probabilidade). Migration
    ainda por criar, com os números do mockup como placeholder explicitamente
    sinalizado na UI (não como dado real).
-2. **Thresholds de SLA do mockup (P2=4h, P3=12h) divergem dos valores reais e já
-   corrigidos no banco (P2=8h, P3=24h).** Decisão necessária: a API usa
-   `dw.dim_prioridade.threshold_sla_horas` (recomendado — é o valor certo) ou
-   mantém os números do mockup como estavam (errado, mas visualmente "igual" à
-   referência)?
+2. ~~Thresholds de SLA do mockup divergem dos valores reais~~ — **resolvido em
+   2026-08-21**: o mockup estava certo (P2=4h, P3=12h); o erro era em
+   `dw.dim_prioridade.threshold_sla_horas` (tinha 8h/24h), corrigido — ver
+   `docs/modelo-dimensional.md`. A API pode usar `threshold_sla_horas`
+   diretamente, sem tradução.
 3. **O painel "Fatores" do mockup não corresponde à realidade do modelo treinado.**
    "Dia da semana" é ilustrado como fator dominante (92%) mas é o último no modelo
    real (1,23%); "Volume D-7 (lag)" e "Item de configuração" não são features do

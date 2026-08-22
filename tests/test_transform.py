@@ -62,12 +62,24 @@ def test_kpi_status_int_isento_quando_nao_entrou_kpi():
     assert out["kpi_status_int"].iloc[0] == -1
 
 
-def test_target_risco_sla_heuristica_p2_acima_de_8h():
+def test_target_risco_sla_heuristica_p2_acima_de_4h():
     df = pd.DataFrame(
         [_linha_base(entrou_kpi=False, kpi_violado=None, prioridade="2 - Alta", duracao_min=9 * 60)]
     )
     out = aplicar_silver(df)
     assert out["target_risco_sla"].iloc[0] == 1
+
+
+def test_target_risco_sla_heuristica_p2_threshold_oficial_e_4h_nao_8h():
+    # Duração de 5h: acima do threshold oficial de P2 (4h), mas abaixo do
+    # valor incorreto usado antes da correção (8h). Prova que o bug foi
+    # corrigido — ver docs/modelo-dimensional.md.
+    df = pd.DataFrame(
+        [_linha_base(entrou_kpi=False, kpi_violado=None, prioridade="2 - Alta", duracao_min=5 * 60)]
+    )
+    out = aplicar_silver(df)
+    assert out["target_risco_sla"].iloc[0] == 1
+    assert out["excedeu_tempo_esperado"].iloc[0] == True  # noqa: E712
 
 
 def test_target_risco_sla_isencao_incidente_filho():

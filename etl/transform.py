@@ -18,7 +18,7 @@ from etl.db import get_engine
 
 MIN_DATE = "2025-01-01"
 
-SLA_THRESHOLD_HORAS = {1: 4, 2: 8, 3: 24, 4: 72}
+SLA_THRESHOLD_HORAS = {1: 4, 2: 4, 3: 12, 4: 24, 5: 96}
 
 DIA_SEMANA_NOMES = ["Domingo", "Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado"]
 MES_NOMES = [
@@ -82,13 +82,16 @@ def aplicar_silver(df: pd.DataFrame) -> pd.DataFrame:
     # Target_Risco_SLA em 3 camadas (ver docstring do módulo).
     target = df["kpi_status_int"].copy()
 
-    # Camada 2 — heurística para KPI desconhecido: P2 (threshold_sla=8h) com
-    # duração acima do threshold. Corrigido para 8h (dim_prioridade define
-    # P2=8h; o original usava 4h ali, inconsistente com a própria dimensão).
+    # Camada 2 — heurística para KPI desconhecido: P2 (threshold_sla=4h) com
+    # duração acima do threshold. P2=4h é o valor oficial do Dicionário de
+    # Dados do desafio (fonte da verdade) — a versão anterior deste código
+    # usava 8h aqui, "corrigido" a partir de um SLA_THRESHOLD_HORAS que
+    # estava errado em dim_prioridade (ver docs/modelo-dimensional.md,
+    # seção "Correção de thresholds de SLA").
     heuristica = (
         (df["kpi_status_int"] == -1)
         & (df["prioridade_num"] == 2)
-        & (df["duracao_horas"] > 8)
+        & (df["duracao_horas"] > 4)
     )
     target = target.where(~heuristica, 1)
 
