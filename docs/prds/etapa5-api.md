@@ -266,6 +266,14 @@ de linhas do ano para `volume_tratado`).
       "indicador": "ola_quebrado",
       "contagem_acumulada_ano": 26,
       "faixa": {"faixa_min": null, "faixa_max": 30, "pct_atingimento": 150, "ordem_faixa": 1},
+      "faixas": [
+        {"faixa_min": null, "faixa_max": 30, "pct_atingimento": 150, "ordem_faixa": 1},
+        {"faixa_min": 31, "faixa_max": 35, "pct_atingimento": 125, "ordem_faixa": 2},
+        {"faixa_min": 36, "faixa_max": 39, "pct_atingimento": 100, "ordem_faixa": 3},
+        {"faixa_min": 40, "faixa_max": 45, "pct_atingimento": 75, "ordem_faixa": 4},
+        {"faixa_min": 46, "faixa_max": 53, "pct_atingimento": 50, "ordem_faixa": 5},
+        {"faixa_min": 54, "faixa_max": null, "pct_atingimento": 0, "ordem_faixa": 6}
+      ],
       "status": "dentro_da_meta",
       "probabilidade_atingir_meta_pct": 61.0,
       "metodologia_probabilidade": "projecao_linear"
@@ -276,7 +284,10 @@ de linhas do ano para `volume_tratado`).
 
 `indicadores` sempre tem **4 linhas** (2 prioridades × 2 indicadores) — nunca P1/P4, nunca
 um 3º indicador. `faixa` vem inteiramente de `faixa_meta_sla()` — a API não reimplementa a
-lógica de faixa, só chama a função existente.
+lógica de faixa, só chama a função existente. `faixas` (plural, adicionado ao religar o
+frontend — Fase 15) traz as **6 faixas** completas de `dw.ref_meta_sla_anual` para essa
+combinação (prioridade, indicador), ordenadas por `ordem_faixa` — a tela KPI precisa delas
+todas para desenhar a grade de 6 células (só `faixa` não é suficiente para isso).
 
 `status` é derivado só do `pct_atingimento` da faixa **observada** (dado real, sem
 projeção): `pct_atingimento >= 100` → `dentro_da_meta`; `50 <= pct_atingimento < 100` →
@@ -290,12 +301,15 @@ fim do ano e comparado contra **a meta de referência da faixa `pct_atingimento=
 `metodologia_probabilidade="projecao_linear"` sempre presente. **Nunca usar Poisson ou
 outro modelo estatístico** — decisão já tomada, não em aberto.
 
-> ⚠️ **Decisão a confirmar antes da implementação**: usar o `faixa_max` da faixa
-> `pct_atingimento=100` como "a meta" para a fórmula de projeção acima é a leitura mais
-> direta do schema real, mas não está explicitamente escrita em nenhum documento anterior
-> (o `PLAN.md` Fase 8 define a fórmula, não qual número é "a meta" no schema de faixas).
-> Confirmar com checkpoint humano antes de fixar isso em código — não é um "achismo de UI"
-> qualquer, é a base do KPI mais visível do dashboard.
+> ⚠️ **Decisão implementada (2026-08-22), sem checkpoint humano formal — revisar se
+> questionada**: usar o `faixa_max` da faixa `pct_atingimento=100` como "a meta" para a
+> fórmula de projeção acima é a leitura mais direta do schema real, mas não estava
+> explicitamente escrita em nenhum documento anterior ao PRD (o `PLAN.md` Fase 8 define a
+> fórmula, não qual número é "a meta" no schema de faixas). Implementado em
+> `app/api/routers/kpi.py::_ORDEM_FAIXA_META_100PCT` como a leitura mais defensável
+> disponível — não é um "achismo de UI", mas também não foi formalmente aprovado por
+> alguém fora desta sessão; se o resultado (`probabilidade_atingir_meta_pct`) parecer
+> estranho em uso real, esta é a primeira suposição a questionar.
 
 `status` **nunca** é derivado de `probabilidade_atingir_meta_pct` — a separação entre
 observado (real) e projeção (heurística) é uma decisão já tomada (`PLAN.md` Fase 8,

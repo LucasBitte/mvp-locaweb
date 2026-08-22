@@ -427,12 +427,20 @@ que hoje é `dw.ref_meta_sla_anual` real com `pct_atingimento` por faixa,
 já refletido na reescrita do PRD). Evitar endpoints extras sem
 necessidade — os 6 endpoints acima cobrem as 6 telas.
 
-## Fase 15 — React
+## Fase 15 — React ✅ implementada e religada à API (2026-08-22)
 
-Seis telas (nomes canônicos — ver Matriz da seção 4): Painel, Detalhe, KPI,
-Fatores, Clusters, Alertas. `app/web/src/` hoje só tem o esqueleto do
-template Vite (`App.tsx`/`main.tsx`/`index.css`) — nenhuma tela construída
-ainda.
+**Resultado**: as 6 telas (nomes canônicos — ver Matriz da seção 4) existem
+em `app/web/src/components/screens/` e consomem dado real de `app/api/`
+via `src/lib/api.ts` (cliente tipado) + `src/lib/useApi.ts` (hook de
+fetch/loading/erro) — nenhum dado estático. `src/data/dashboardData.ts`
+virou só funções puras de apresentação (recebem a resposta da API,
+devolvem geometria/texto prontos). Tela KPI foi redesenhada (não só
+religada) para refletir o schema real de `dw.ref_meta_sla_anual` — só
+P2/P3 têm meta, sem as faixas de P1/P4 que o design original mostrava sem
+fonte real. Verificado com Chromium headless (Playwright) nos 6 tabs: zero
+erros de console, zero requests falhas, `tsc -b`/`npm run build` limpos.
+Rodar: API (`./venv/bin/python3 -m uvicorn app.api.main:app --reload`,
+porta 8000) + `cd app/web && npm run dev` (porta 5173).
 
 ## Fase 16 — Sprint 3 / Storytelling
 

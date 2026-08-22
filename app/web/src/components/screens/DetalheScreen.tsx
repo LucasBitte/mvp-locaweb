@@ -1,12 +1,16 @@
+import { getDetalhe } from '../../lib/api'
+import { useApi } from '../../lib/useApi'
 import {
+  computeFocoP2P3,
   computeMixHistorico,
   computePrioridadeFiltro,
   computeRecorrencia,
   computeTopCategorias,
   computeTopProdutos,
 } from '../../data/dashboardData'
-import { MUTED, NAVY, SUB } from '../../lib/theme'
+import { AMBER, GREEN, MUTED, NAVY, SUB } from '../../lib/theme'
 import { SourceTag } from '../SourceTag'
+import { ErrorState, Loading } from '../ApiStatus'
 
 const cardStyle = {
   background: '#FFFFFF',
@@ -24,11 +28,22 @@ interface DetalheScreenProps {
 }
 
 export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
+  const categoria = useApi(() => getDetalhe({ agrupamento: 'categoria' }), [])
+  const produto = useApi(() => getDetalhe({ agrupamento: 'produto' }), [])
+
+  if (categoria.loading || produto.loading) return <Loading />
+  if (categoria.error || !categoria.data) return <ErrorState error={categoria.error ?? 'sem dado'} />
+  if (produto.error || !produto.data) return <ErrorState error={produto.error ?? 'sem dado'} />
+
   const prios = computePrioridadeFiltro()
-  const mix = computeMixHistorico()
-  const cats = computeTopCategorias()
-  const prods = computeTopProdutos()
-  const recur = computeRecorrencia()
+  const foco = computeFocoP2P3(categoria.data.prioridades)
+  const mix = computeMixHistorico(categoria.data.prioridades)
+  const cats = computeTopCategorias(categoria.data.top_entidades)
+  const prods = computeTopProdutos(produto.data.top_entidades)
+  const recur = computeRecorrencia(categoria.data.recorrencia.entidades)
+
+  const p2 = categoria.data.prioridades.find((p) => p.prioridade_num === 2)
+  const p3 = categoria.data.prioridades.find((p) => p.prioridade_num === 3)
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -38,8 +53,10 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
             Foco padrão da tela
           </span>
           <span style={{ font: '600 17px/1.3 Manrope,sans-serif', color: NAVY }}>
-            P2 + P3 — 78,9% do volume total{' '}
-            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, fontSize: 14, color: MUTED }}>(32.677 / 41.441)</span>
+            P2 + P3 — {foco.pct}% do volume total{' '}
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, fontSize: 14, color: MUTED }}>
+              ({foco.n} / {foco.total})
+            </span>
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -68,66 +85,44 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 20 }}>
-        <div style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ font: "700 15px/1 'JetBrains Mono',monospace", color: NAVY }}>P2</span>
-            <span style={{ padding: '5px 10px', borderRadius: 999, background: '#E6ECFB', font: "500 11px/1 'JetBrains Mono',monospace", color: '#1E6FD9' }}>
-              SLA 4h
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ font: "600 38px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>46,1</span>
-            <span style={{ font: '500 13px/1 Inter,sans-serif', color: SUB }}>previstos amanhã</span>
-          </div>
-          <div style={{ height: 1, background: 'rgba(10,22,40,.08)' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ font: '600 11px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.06em', color: SUB }}>
-                % do limite mensal
-              </span>
-              <span style={{ font: "500 15px/1 'JetBrains Mono',monospace", color: '#8a6210' }}>62%</span>
+        {[
+          { prio: p2, cor: AMBER },
+          { prio: p3, cor: GREEN },
+        ].map(({ prio, cor }) =>
+          prio ? (
+            <div key={prio.prioridade_num} style={cardStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ font: "700 15px/1 'JetBrains Mono',monospace", color: NAVY }}>P{prio.prioridade_num}</span>
+                <span style={{ padding: '5px 10px', borderRadius: 999, background: '#E6ECFB', font: "500 11px/1 'JetBrains Mono',monospace", color: '#1E6FD9' }}>
+                  SLA {prio.threshold_sla_horas}h
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                <span style={{ font: "600 38px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>
+                  {prio.previsto.toFixed(1).replace('.', ',')}
+                </span>
+                <span style={{ font: '500 13px/1 Inter,sans-serif', color: SUB }}>previstos D+1</span>
+              </div>
+              <div style={{ height: 1, background: 'rgba(10,22,40,.08)' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ font: '600 11px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.06em', color: SUB }}>
+                    % do limite mensal
+                  </span>
+                  <span style={{ font: "500 13px/1 'JetBrains Mono',monospace", color: cor }}>sem fonte</span>
+                </div>
+                <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>
+                  Não existe limite mensal de volume por prioridade em nenhuma tabela hoje —{' '}
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>is_placeholder_limite=true</span>, fora de escopo
+                  (não fabricado).
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · fct_previsao_prioridade</SourceTag>
+              </div>
             </div>
-            <div style={{ height: 8, borderRadius: 4, background: '#F0F3FF', overflow: 'hidden' }}>
-              <div style={{ width: '62%', height: '100%', background: '#E8A317' }} />
-            </div>
-            <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>
-              Derivado da posição na faixa anual de <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>ref_meta_sla_anual</span> — não existe meta mensal própria.
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · fct_previsao_prioridade</SourceTag>
-            <SourceTag visible={mostrarOrigem}>REGRA · limite</SourceTag>
-          </div>
-        </div>
-
-        <div style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ font: "700 15px/1 'JetBrains Mono',monospace", color: NAVY }}>P3</span>
-            <span style={{ padding: '5px 10px', borderRadius: 999, background: '#E6ECFB', font: "500 11px/1 'JetBrains Mono',monospace", color: '#1E6FD9' }}>
-              SLA 12h
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ font: "600 38px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>71,8</span>
-            <span style={{ font: '500 13px/1 Inter,sans-serif', color: SUB }}>previstos amanhã</span>
-          </div>
-          <div style={{ height: 1, background: 'rgba(10,22,40,.08)' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ font: '600 11px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.06em', color: SUB }}>
-                % do limite mensal
-              </span>
-              <span style={{ font: "500 15px/1 'JetBrains Mono',monospace", color: '#0F9D58' }}>48%</span>
-            </div>
-            <div style={{ height: 8, borderRadius: 4, background: '#F0F3FF', overflow: 'hidden' }}>
-              <div style={{ width: '48%', height: '100%', background: '#0F9D58' }} />
-            </div>
-            <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>Threshold oficial de P3 é 12h — não 24h.</span>
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · fct_previsao_prioridade</SourceTag>
-          </div>
-        </div>
+          ) : null
+        )}
 
         <div style={{ ...cardStyle, gap: 14 }}>
           <span style={{ font: '600 12px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.05em', color: SUB }}>
@@ -154,7 +149,7 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 20 }}>
         <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
-            <span style={cardTitle}>Top 5 categorias — volume previsto D+1</span>
+            <span style={cardTitle}>Top categorias — volume previsto D+1</span>
             <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO</SourceTag>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -197,30 +192,38 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
       <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={cardTitle}>Recorrência operacional</span>
-            <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>Últimos 30 dias comparados aos 30 dias anteriores</span>
+            <span style={cardTitle}>Recorrência operacional — categoria</span>
+            <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
+              Janela {categoria.data.recorrencia.janela_referencia} · últimos 30 dias vs. 30 dias anteriores
+            </span>
           </div>
           <SourceTag visible={mostrarOrigem}>REGRA · JANELA MÓVEL</SourceTag>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 16, marginTop: 16 }}>
-          {recur.map((r) => (
-            <div key={r.name} style={{ background: '#F9F9FF', borderRadius: 12, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ font: "600 15px/1 'JetBrains Mono',monospace", color: NAVY }}>{r.name}</span>
-                <span style={{ padding: '4px 10px', borderRadius: 999, background: r.badgeBg, font: '500 11px/1.2 Inter,sans-serif', color: r.badgeFg }}>
-                  {r.badge}
+        {recur.length === 0 ? (
+          <p style={{ margin: '16px 0 0', font: '400 13px/1.5 Inter,sans-serif', color: MUTED }}>
+            Nenhuma categoria classificada como recorrente crescente/estável nesta janela.
+          </p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 16, marginTop: 16 }}>
+            {recur.map((r) => (
+              <div key={r.name} style={{ background: '#F9F9FF', borderRadius: 12, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ font: "600 15px/1 'JetBrains Mono',monospace", color: NAVY }}>{r.name}</span>
+                  <span style={{ padding: '4px 10px', borderRadius: 999, background: r.badgeBg, font: '500 11px/1.2 Inter,sans-serif', color: r.badgeFg }}>
+                    {r.badge}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+                  <span style={{ font: "600 26px/1 'JetBrains Mono',monospace", color: r.badgeFg }}>{r.delta}</span>
+                  <span style={{ font: '400 12px/1.3 Inter,sans-serif', color: SUB }}>vs. janela anterior</span>
+                </div>
+                <span style={{ font: '400 12px/1.5 Inter,sans-serif', color: MUTED }}>
+                  Presente em <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, color: NAVY }}>{r.days}</span> dos dias da janela — {r.note}
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-                <span style={{ font: "600 26px/1 'JetBrains Mono',monospace", color: r.badgeFg }}>{r.delta}</span>
-                <span style={{ font: '400 12px/1.3 Inter,sans-serif', color: SUB }}>vs. janela anterior</span>
-              </div>
-              <span style={{ font: '400 12px/1.5 Inter,sans-serif', color: MUTED }}>
-                Presente em <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, color: NAVY }}>{r.days}</span> dos dias da janela — {r.note}
-              </span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )

@@ -1,6 +1,16 @@
-import { computeForecastBars, computeHistorico, computeTeamPressure } from '../../data/dashboardData'
+import { getPainel } from '../../lib/api'
+import { useApi } from '../../lib/useApi'
+import {
+  computeForecastBars,
+  computeHistorico,
+  computeTeamPressure,
+  nivelPressaoLabel,
+  riscoOlaVisual,
+  VOLUME_HISTORICO_2025,
+} from '../../data/dashboardData'
 import { MUTED, NAVY, SUB } from '../../lib/theme'
 import { SourceTag } from '../SourceTag'
+import { ErrorState, Loading } from '../ApiStatus'
 
 const cardStyle = {
   background: '#FFFFFF',
@@ -22,37 +32,49 @@ interface PainelScreenProps {
 }
 
 export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps) {
-  const { pts, linePts, areaPath, grid, Y1 } = computeHistorico()
-  const { fc, fcAvgY } = computeForecastBars()
-  const teams = computeTeamPressure(limiarCritico)
-  const critX = `${((limiarCritico / 40) * 100).toFixed(1)}%`
+  const { data, loading, error } = useApi(() => getPainel({ dias: 30 }), [])
+
+  if (loading) return <Loading />
+  if (error || !data) return <ErrorState error={error ?? 'sem dado'} />
+
+  const historico = data.serie.filter((p) => p.tipo === 'historico')
+  const previsao = data.serie.filter((p) => p.tipo === 'previsao')
+  const { pts, linePts, areaPath, grid, Y1 } = computeHistorico(historico)
+  const { fc, fcAvgY } = computeForecastBars(previsao, data.previsao_d7_media.valor)
+  const { rows: teams, maxAbs: pressaoMaxAbs } = computeTeamPressure(data.pressao_equipes, limiarCritico)
+  const critX = `${Math.min(100, (limiarCritico / pressaoMaxAbs) * 100).toFixed(1)}%`
+  const risco = riscoOlaVisual(data.risco_ola.nivel)
+  const equipeCritica = data.pressao_equipes.find((e) => e.nivel_pressao === 'critico')
+  const equipeAtencao = data.pressao_equipes.filter((e) => e.nivel_pressao !== 'normal')
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 20 }}>
         <div style={cardStyle}>
-          <span style={kicker}>Previsão D+1</span>
+          <span style={kicker}>Previsão D+1 · {data.previsao_d1.data}</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>124,5</span>
+            <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>
+              {data.previsao_d1.valor.toLocaleString('pt-BR')}
+            </span>
             <span style={{ font: '500 13px/1 Inter,sans-serif', color: SUB }}>incidentes</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ padding: '4px 9px', borderRadius: 999, background: 'rgba(232,163,23,.12)', font: "500 11px/1.2 'JetBrains Mono',monospace", color: '#8a6210' }}>
-              +9,7% vs média
-            </span>
-            <span style={{ font: '400 11px/1.2 Inter,sans-serif', color: SUB }}>média histórica 113,5/dia</span>
-          </div>
+          {data.previsao_d1.metodologia && (
+            <span style={{ font: '400 11px/1.3 Inter,sans-serif', color: SUB }}>proporção histórica (não é modelo por corte)</span>
+          )}
           <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · PROPHET</SourceTag>
         </div>
 
         <div style={cardStyle}>
           <span style={kicker}>Previsão D+7 · média/dia</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>115,8</span>
+            <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>
+              {data.previsao_d7_media.valor.toLocaleString('pt-BR')}
+            </span>
             <span style={{ font: '500 13px/1 Inter,sans-serif', color: SUB }}>incidentes/dia</span>
           </div>
           <span style={{ font: '400 11px/1.4 Inter,sans-serif', color: SUB }}>
-            Média aritmética dos 7 valores previstos D+1…D+7 (soma 810,5)
+            {data.previsao_d7_media.variacao_pct_vs_media_historica >= 0 ? '+' : ''}
+            {data.previsao_d7_media.variacao_pct_vs_media_historica.toFixed(1).replace('.', ',')}% vs. média histórica diária
           </span>
           <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · PROPHET</SourceTag>
         </div>
@@ -60,8 +82,10 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
         <div style={cardStyle}>
           <span style={kicker}>Risco de OLA</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-            <span style={{ font: '700 32px/1 Manrope,sans-serif', letterSpacing: '-.02em', color: '#8a6210' }}>Médio</span>
-            <span style={{ font: "500 15px/1 'JetBrains Mono',monospace", color: MUTED }}>18,4%</span>
+            <span style={{ font: '700 32px/1 Manrope,sans-serif', letterSpacing: '-.02em', color: risco.color }}>{risco.label}</span>
+            <span style={{ font: "500 15px/1 'JetBrains Mono',monospace", color: MUTED }}>
+              {data.risco_ola.pct_violacao_media_movel.toFixed(2).replace('.', ',')}%
+            </span>
           </div>
           <div style={{ display: 'flex', gap: 4, alignItems: 'stretch' }}>
             <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(15,157,88,.25)' }} />
@@ -69,7 +93,8 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
             <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(214,69,69,.25)' }} />
           </div>
           <span style={{ font: '400 11px/1.4 Inter,sans-serif', color: SUB }}>
-            Faixas fixas sobre <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>pct_violacao_sla</span>: &lt;10% baixo · 10–25% médio · &gt;25% alto
+            Média móvel de <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>pct_violacao_sla</span> nos últimos{' '}
+            {data.risco_ola.janela_dias} dias
           </span>
           <SourceTag visible={mostrarOrigem}>REGRA DETERMINÍSTICA</SourceTag>
         </div>
@@ -77,10 +102,14 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
         <div style={cardStyle}>
           <span style={kicker}>Volume base 2025</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>41.441</span>
+            <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>
+              {VOLUME_HISTORICO_2025.toLocaleString('pt-BR')}
+            </span>
             <span style={{ font: '500 13px/1 Inter,sans-serif', color: SUB }}>incidentes</span>
           </div>
-          <span style={{ font: '400 11px/1.4 Inter,sans-serif', color: SUB }}>Volume mensal estável entre 2.343 e 4.053 no ano</span>
+          <span style={{ font: '400 11px/1.4 Inter,sans-serif', color: SUB }}>
+            Total do ano encerrado — volume mensal estável entre 2.343 e 4.053
+          </span>
           <SourceTag variant="historico" visible={mostrarOrigem}>HISTÓRICO · DW</SourceTag>
         </div>
       </div>
@@ -89,8 +118,8 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
         <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px 20px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={cardTitle}>Histórico mensal — 2025</span>
-              <span style={cardSub}>Contagem de incidentes por mês · escala mensal</span>
+              <span style={cardTitle}>Histórico — últimos {historico.length} dias</span>
+              <span style={cardSub}>Contagem diária de incidentes</span>
             </div>
             <SourceTag variant="historico" visible={mostrarOrigem}>HISTÓRICO · DW</SourceTag>
           </div>
@@ -127,7 +156,7 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
           <svg viewBox="0 0 380 220" style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
             <line x1={0} x2={380} y1={fcAvgY} y2={fcAvgY} stroke={SUB} strokeWidth={1} strokeDasharray="4 4" />
             <text x={380} y={fcAvgY - 6} textAnchor="end" fontFamily="JetBrains Mono, monospace" fontSize={10} fill={SUB}>
-              média 115,8
+              média {data.previsao_d7_media.valor.toLocaleString('pt-BR')}
             </text>
             {fc.map((b, i) => (
               <rect key={i} x={b.x} y={b.y} width={38} height={b.h} rx={6} fill={b.fill} />
@@ -180,7 +209,11 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
           ))}
         </div>
         <p style={{ margin: '18px 0 0', font: '400 12px/1.5 Inter,sans-serif', color: MUTED }}>
-          Nenhuma equipe cruzou o limiar crítico (&gt;{limiarCritico}%) nesta execução. Todas as equipes de maior volume estão abaixo da própria média histórica em D+1.
+          {equipeCritica
+            ? `${equipeCritica.grupo_designado} cruzou o limiar crítico (>${limiarCritico}%) nesta execução.`
+            : equipeAtencao.length > 0
+              ? `Nenhuma equipe cruzou o limiar crítico (>${limiarCritico}%) nesta execução. ${equipeAtencao.length} equipe(s) em nível ${nivelPressaoLabel('atencao')}.`
+              : `Nenhuma equipe cruzou o limiar crítico (>${limiarCritico}%) nesta execução — todas as equipes estão em nível normal.`}
         </p>
       </div>
     </section>

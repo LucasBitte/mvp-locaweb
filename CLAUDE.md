@@ -22,8 +22,8 @@ dashboard React.
 ```bash
 # setup
 cp .env.example .env                                   # preencher FIAP_DB_*
-python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
-./venv/bin/pip install -r requirements-notebooks.txt
+python3 -m venv venv && ./venv/bin/python3 -m pip install -r requirements.txt
+./venv/bin/python3 -m pip install -r requirements-notebooks.txt
 
 # pipeline completo, NESTA ORDEM (migrations já aplicadas no banco fiap)
 jupyter nbconvert --to notebook --execute --inplace notebooks/03_bronze_silver_transformacao.ipynb
@@ -38,11 +38,14 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/model_clustering_k
 jupyter nbconvert --to notebook --execute --inplace notebooks/model_risk_xgboost_.ipynb
 python notebooks/diagnostico_kmeans_k.py               # read-only, nao altera ml.dim_cluster/fct_perfil_cluster
 
-# testes
-./venv/bin/pytest tests/
+# testes (ver §10 sobre por que é `python3 -m pytest`, não `./venv/bin/pytest`)
+./venv/bin/python3 -m pytest tests/
 
-# dashboard React (app/web/) — 6 telas já implementadas, dado estático por enquanto
-cd app/web && npm install && npm run dev     # http://localhost:5173
+# API FastAPI (app/api/) — 6 endpoints, dado real
+./venv/bin/python3 -m uvicorn app.api.main:app --reload   # http://localhost:8000
+
+# dashboard React (app/web/) — 6 telas religadas à API real (nenhum dado estático)
+cd app/web && npm install && npm run dev     # http://localhost:5173, precisa da API rodando
 cd app/web && npm run build                  # tsc -b && vite build
 ```
 
@@ -94,27 +97,29 @@ Documentação completa: [`docs/dicionario-dados.md`](docs/dicionario-dados.md) 
 - K-Means: diagnóstico `k=2..8` executado (read-only, `notebooks/diagnostico_kmeans_k.py`) — **sem vencedor claro** (silhouette máximo em k=2, Davies-Bouldin mínimo em k=8); `k=4` em produção fica em posição intermediária, sem defesa estatística forte nem motivo para trocar. PCA(n_components=3) confirmado explicando só **39,95%** de variância (comentário do notebook dizia "95%") — não corrigido (mudaria o modelo em produção; checkpoint humano). Ver `docs/metricas-validacao.md`.
 - EDA formal: `docs/eda-consolidada.md`. Métricas de validação consolidadas (Prophet/XGBoost/K-Means, com 3 achados que exigem decisão humana — Prophet não bate o baseline simples, XGBoost não atinge a meta de AUC-ROC 0,85, K-Means sem k ótimo claro): `docs/metricas-validacao.md`.
 
-**Dashboard React implementado (2026-08-22, fora da numeração de fases do PLAN.md — adiantado a pedido):**
-- As 6 telas (`app/web/src/components/screens/`) foram portadas 1:1 do projeto Claude Design
-  "AIOps Dashboard.dc.html" (`claude.ai/design/p/63defcd6-35eb-4d1e-983f-a73f61be15d2`), importado via
-  `DesignSync`/`/design-login`. Fidelidade visual confirmada rodando os 6 tabs num Chromium headless
-  (Playwright) — zero erros de console, `tsc -b` e `npm run build` limpos.
-- Dado ainda **estático** (`src/data/dashboardData.ts`) — mesmos números reais das Fases 1-13 desta
-  sessão (pressão por equipe, recorrência, splits P2/P3 e produto, faixas de meta, SHAP, clusters),
-  não fabricados, mas fixos até a Etapa 5 existir. Selo do header diz "DADOS DE EXEMPLO · FASE 15",
-  nunca "mockup"/dado real — não remover esse selo antes de existir uma API de verdade por trás.
-- Cada tela chama funções `computeXxx()` puras em `dashboardData.ts` — quando a Etapa 5 (API) existir,
-  a troca é só essas chamadas por `fetch`/hooks; o JSX das telas não muda.
+**Dashboard React religado à API real (2026-08-22)** — `app/web/` não usa mais dado
+estático; as 6 telas buscam ao vivo em `app/api/` via `src/lib/api.ts` (cliente tipado,
+espelha os `pydantic.BaseModel` dos routers) + `src/lib/useApi.ts` (hook de fetch com
+loading/erro). `src/data/dashboardData.ts` virou só funções puras de apresentação
+(recebem a resposta da API, devolvem geometria/texto prontos — nenhuma busca dado).
+Selo do header agora diz "DADOS REAIS · API · FASE 14" (era "DADOS DE EXEMPLO"). Rodar:
+API (`./venv/bin/python3 -m uvicorn app.api.main:app --reload`, porta 8000) +
+`cd app/web && npm run dev` (porta 5173, lê `VITE_API_BASE_URL` de `.env`, default
+`http://localhost:8000`). Verificado com os 6 tabs num Chromium headless (Playwright) —
+zero erros de console, zero requests falhas, `tsc -b`/`npm run build` limpos.
 
-**API FastAPI implementada (2026-08-22, PLAN.md Fases 6-9/11/14):**
-- 6 endpoints reais em `app/api/routers/` (`painel`, `detalhe`, `kpi`, `fatores`, `clusters`,
-  `alertas`), registrados em `app/api/main.py`, lendo do banco `fiap` via `etl.db.get_engine()`
-  (`app/api/deps.py`). Contrato de dados completo, endpoint a endpoint: `docs/prds/etapa5-api.md`.
-  Testes de contrato em `tests/test_api_<tela>.py` (rodam contra o banco real, só `SELECT`,
-  mesmo padrão de `tests/test_api.py`) — `./venv/bin/python3 -m pytest tests/` (38 testes, ✅).
-- **Ainda não religado ao frontend** — `app/web/` continua consumindo `dashboardData.ts`
-  estático; a troca é substituir as chamadas `computeXxx()` por `fetch` nas 6 telas (Fase 15
-  do `PLAN.md`, não feita nesta rodada).
+- Telas Painel/Detalhe/Fatores/Clusters/Alertas: troca direta compute→fetch, mesma
+  estrutura visual do design original.
+- Tela KPI: **redesenhada**, não só religada — o design original tinha 4 linhas P1-P4 com
+  faixas inventadas (só P2/P3 têm meta real em `dw.ref_meta_sla_anual`) e uma framing
+  mensal que a API não sustenta (dado é anual). Agora mostra as 4 combinações reais
+  (P2/P3 × ola_quebrado/volume_tratado), cada uma com as 6 faixas reais (`/api/kpi` ganhou
+  o campo `faixas`, ver `docs/prds/etapa5-api.md` §4.3).
+- Tela Detalhe: "% do limite mensal" (nunca teve fonte real) agora mostra "sem fonte" em
+  vez de uma barra de progresso fabricada.
+- Tela Clusters: bolhas usam `cor_hex` real de `ml.dim_cluster` (não mais uma cor
+  calculada por limiar); rótulo "Excedeu tempo esperado" em vez de "Violação de OLA" para
+  não contradizer a tela KPI (ver achado abaixo).
 - **2 achados de auditoria confirmados ao vivo contra o banco, documentados em
   `docs/prds/etapa5-api.md` §4.5** (checkpoint humano, nada retreinado/alterado no banco):
   1. `ml.fct_perfil_cluster.taxa_sla_violado_pct` usa `excedeu_tempo_esperado` (94-98% no
@@ -174,8 +179,8 @@ mvp-locaweb/
 | 2 | Modelo dimensional (`dw.*`) | ✅ |
 | 3 | Marts de features (`ml.ml_*`) | ✅ |
 | 4 | Modelos de ML rodando contra o banco + output real (`ml.fct_*`) | ✅ |
-| 5 | API FastAPI — 6 endpoints implementados e testados contra o banco real (`app/api/routers/`) | 🟡 (falta religar o frontend) |
-| 6 | Dashboard React — 6 telas implementadas, consumindo dado estático (aguarda religar na Etapa 5 para dado real) | 🟡 |
+| 5 | API FastAPI — 6 endpoints implementados e testados contra o banco real (`app/api/routers/`) | ✅ |
+| 6 | Dashboard React — 6 telas religadas à API real (`app/web/src/lib/api.ts`), sem dado estático | ✅ |
 
 > Antes de iniciar a Etapa 5, ver `PLAN.md` — plano de fechamento de lacunas
 > frente ao desafio (P2/P3 default, pressão por equipe, recorrência, EDA
@@ -185,6 +190,7 @@ mvp-locaweb/
 ## 10. Erros recorrentes já corrigidos (adicionar aqui sempre que acontecer de novo)
 
 - **Detector de "quebra de patamar" (`validar_serie`, `notebooks/forecast_incidentes_revisado.py`) pode apontar o último dia da série.** Em séries mais curtas/ruidosas que o total (ex.: forecast por equipe), a razão de medianas móveis de 28 dias pode disparar bem perto do fim da série. Se usada sem checagem, `inicio_treino` fica tão perto do fim que não sobra runway para a 1ª origem do backtest (45 dias) + horizonte (7 dias) → backtest vazio → `AttributeError: 'DataFrame' object has no attribute 'yhat'`. Corrigido em `notebooks/forecast_equipe.py` (`RUNWAY_MINIMO_DIAS`): só aplica a quebra detectada se sobrar pelo menos 52 dias até o fim da série; senão ignora e usa o histórico completo. Qualquer novo uso de `validar_serie`/`quebras_de_patamar_detectadas` num script novo precisa da mesma guarda.
+- **`./venv/bin/pytest`, `./venv/bin/uvicorn`, `./venv/bin/pip` (e outros consoles-scripts instalados via `requirements.txt`) falham com `cannot execute: required file not found`.** Causa: o venv foi originalmente criado em `/home/fiap/fiap-incidentes-dashboard/venv` e movido/copiado para `/home/fiap/mvp-locaweb/venv` — os scripts instalados **antes** da mudança têm o shebang hardcoded para o caminho antigo (`#!/home/fiap/fiap-incidentes-dashboard/venv/bin/python`, que não existe mais), enquanto pacotes reinstalados depois (ex. `jupyter`, de `requirements-notebooks.txt`) têm o shebang correto. Sintoma sempre aparece como "arquivo não encontrado" mesmo com o binário existindo (`ls` confirma que o arquivo está lá — o problema é o interpretador do shebang, não o script em si). **Contorno, sempre**: invocar via `./venv/bin/python3 -m <comando>` (`python3 -m pytest`, `python3 -m uvicorn`, `python3 -m pip install`) em vez do console-script direto — `python3` é um symlink são (`venv/bin/python3` → `/usr/bin/python3`), então `-m` nunca passa pelo shebang quebrado. Corrigido nos comandos documentados na seção 2. Correção definitiva (não feita — mudaria arquivos do venv sem necessidade para o trabalho já em andamento): `./venv/bin/python3 -m pip install --force-reinstall --no-deps -r requirements.txt` regeneraria os console-scripts com o shebang certo.
 
 ## 11. Onde procurar mais contexto
 
@@ -196,7 +202,8 @@ mvp-locaweb/
 - Métricas de validação consolidadas (Prophet/XGBoost/K-Means, com achados que exigem decisão humana): `docs/metricas-validacao.md`
 - Changelog das Fases 1-5/10/12/13 (tabelas novas, resultados reais): `docs/changelog-fechamento-lacunas-2026-08-22.md`
 - Changelog da Fase 14 (API FastAPI — endpoints, achados de auditoria, bug do SHAP corrigido): `docs/changelog-fase14-api-2026-08-22.md`
-- Dashboard React (6 telas, dado estático): `app/web/src/components/screens/` — dados em `app/web/src/data/dashboardData.ts`; design de origem no projeto Claude Design "AIOps Dashboard.dc.html" (`claude.ai/design/p/63defcd6-35eb-4d1e-983f-a73f61be15d2`)
+- Changelog da Fase 15 (React religado à API real — redesenhos de tela, achado do venv): `docs/changelog-fase15-religar-frontend-2026-08-22.md`
+- Dashboard React (6 telas, religado à API real): `app/web/src/components/screens/` — cliente HTTP em `app/web/src/lib/api.ts`, funções de apresentação em `app/web/src/data/dashboardData.ts`; design de origem no projeto Claude Design "AIOps Dashboard.dc.html" (`claude.ai/design/p/63defcd6-35eb-4d1e-983f-a73f61be15d2`)
 - API FastAPI (6 endpoints, dado real): `app/api/routers/` + contrato completo em `docs/prds/etapa5-api.md`; testes em `tests/test_api_*.py`
 
 ## 12. Operações aprovadas e proibidas (todos os modos)

@@ -1,15 +1,22 @@
+import { getAlertas } from '../../lib/api'
+import { useApi } from '../../lib/useApi'
 import { computeAlertas, computeRecomendacoes } from '../../data/dashboardData'
 import { MUTED, NAVY, SUB } from '../../lib/theme'
 import { SourceTag } from '../SourceTag'
+import { ErrorState, Loading } from '../ApiStatus'
 
 interface AlertasScreenProps {
   mostrarOrigem: boolean
-  limiarCritico: number
 }
 
-export function AlertasScreen({ mostrarOrigem, limiarCritico }: AlertasScreenProps) {
-  const alerts = computeAlertas(limiarCritico)
-  const recs = computeRecomendacoes(limiarCritico)
+export function AlertasScreen({ mostrarOrigem }: AlertasScreenProps) {
+  const { data, loading, error } = useApi(() => getAlertas(), [])
+
+  if (loading) return <Loading />
+  if (error || !data) return <ErrorState error={error ?? 'sem dado'} />
+
+  const alerts = computeAlertas(data.alertas)
+  const recs = computeRecomendacoes(data.recomendacoes)
 
   return (
     <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.35fr) minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
@@ -18,8 +25,8 @@ export function AlertasScreen({ mostrarOrigem, limiarCritico }: AlertasScreenPro
           <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Alertas ativos</span>
           <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>Cada alerta é disparado por uma regra explícita, com origem visível</span>
         </div>
-        {alerts.map((a) => (
-          <div key={a.rule} style={{ background: '#FFFFFF', borderRadius: 16, padding: '22px 24px', boxShadow: '0 4px 16px rgba(10,22,40,.03)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {alerts.map((a, i) => (
+          <div key={`${a.rule}-${i}`} style={{ background: '#FFFFFF', borderRadius: 16, padding: '22px 24px', boxShadow: '0 4px 16px rgba(10,22,40,.03)', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ width: 8, height: 8, borderRadius: 999, background: a.dot }} />
@@ -45,7 +52,6 @@ export function AlertasScreen({ mostrarOrigem, limiarCritico }: AlertasScreenPro
               <span style={{ padding: '5px 10px', borderRadius: 999, background: 'rgba(10,22,40,.06)', font: "500 11px/1 'JetBrains Mono',monospace", color: NAVY }}>
                 {a.rule}
               </span>
-              <span style={{ font: '400 11px/1.4 Inter,sans-serif', color: SUB }}>{a.cond}</span>
             </div>
           </div>
         ))}

@@ -1,7 +1,10 @@
 import { Fragment } from 'react'
+import { getFatores } from '../../lib/api'
+import { useApi } from '../../lib/useApi'
 import { computeHeatmap, computeImportanciaFeatures, computeShapExplicacao } from '../../data/dashboardData'
 import { MUTED, NAVY, SUB } from '../../lib/theme'
 import { SourceTag } from '../SourceTag'
+import { ErrorState, Loading } from '../ApiStatus'
 
 const cardTitle = { font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }
 const cardSub = { font: '400 12px/1.4 Inter,sans-serif', color: SUB }
@@ -11,9 +14,15 @@ interface FatoresScreenProps {
 }
 
 export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
-  const feats = computeImportanciaFeatures()
-  const shap = computeShapExplicacao()
-  const { dows, heat } = computeHeatmap()
+  const { data, loading, error } = useApi(() => getFatores(), [])
+
+  if (loading) return <Loading />
+  if (error || !data) return <ErrorState error={error ?? 'sem dado'} />
+
+  const feats = computeImportanciaFeatures(data.importancia_conceitos)
+  const shap = computeShapExplicacao(data.shap_top_risco)
+  const { dows, heat } = computeHeatmap(data.heatmap_categoria_dia)
+  const fonteImportancia = data.granularidade === 'conceito' ? 'ml.fct_importancia_conceito' : 'ml.fct_importancia_feature (fallback)'
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -23,7 +32,7 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={cardTitle}>Importância dos fatores</span>
               <span style={cardSub}>
-                Valores de <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>ml.fct_importancia_conceito</span>
+                Valores de <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>{fonteImportancia}</span>
               </span>
             </div>
             <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · XGBOOST</SourceTag>
@@ -39,9 +48,6 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
               </div>
             ))}
           </div>
-          <p style={{ margin: '18px 0 0', font: '400 12px/1.55 Inter,sans-serif', color: MUTED }}>
-            Dia da semana é o fator de menor peso do modelo (1,23%). As features de maior peso são estruturais: prioridade, carga do time e triagem por categoria.
-          </p>
         </div>
 
         <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
@@ -49,17 +55,20 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={cardTitle}>Por que este incidente tem risco elevado</span>
               <span style={cardSub}>
-                SHAP para <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>INC0048213</span> — um dos 30 incidentes de maior risco individual
+                SHAP para <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>{shap.incidentId ?? '—'}</span> — um dos 30
+                incidentes de maior risco individual
               </span>
             </div>
             <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · XGBOOST</SourceTag>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, margin: '14px 0 18px' }}>
-            <span style={{ font: "600 30px/1 'JetBrains Mono',monospace", color: '#D64545' }}>0,86</span>
-            <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>risco de violação de OLA · base do modelo 0,18</span>
+            <span style={{ font: "600 30px/1 'JetBrains Mono',monospace", color: '#D64545' }}>
+              {shap.score !== null ? shap.score.toFixed(2).replace('.', ',') : '—'}
+            </span>
+            <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>score_calibrado · risco de violação de OLA</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {shap.map((s) => (
+            {shap.rows.map((s) => (
               <div key={s.name} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 56px', alignItems: 'center', gap: 12 }}>
                 <span style={{ font: '500 12px/1.3 Inter,sans-serif', color: NAVY }}>{s.name}</span>
                 <div style={{ position: 'relative', height: 14, borderRadius: 4, background: '#F9F9FF' }}>
@@ -80,7 +89,7 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={cardTitle}>Categoria × dia da semana</span>
-            <span style={cardSub}>Volume médio de abertura · agregação calculada, sem tabela dedicada</span>
+            <span style={cardSub}>Volume médio de abertura · top 10 categorias por volume total</span>
           </div>
           <SourceTag variant="calculado" visible={mostrarOrigem}>CALCULADO · DW</SourceTag>
         </div>

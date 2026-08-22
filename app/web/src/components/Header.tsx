@@ -58,13 +58,13 @@ export function Header({ activeTab, onSelectTab }: HeaderProps) {
               gap: 6,
               padding: '6px 12px',
               borderRadius: 999,
-              background: '#E6ECFB',
+              background: 'rgba(15,157,88,.14)',
               font: "500 11px/1 'JetBrains Mono',monospace",
               letterSpacing: '.04em',
-              color: '#1E6FD9',
+              color: '#0F9D58',
             }}
           >
-            DADOS DE EXEMPLO · FASE 15
+            DADOS REAIS · API · FASE 14
           </span>
         </div>
       </div>

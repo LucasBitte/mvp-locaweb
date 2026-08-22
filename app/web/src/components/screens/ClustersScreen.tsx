@@ -1,27 +1,38 @@
+import { getClusters } from '../../lib/api'
+import { useApi } from '../../lib/useApi'
 import { computeBolhas, computeClustersCards } from '../../data/dashboardData'
 import { MUTED, NAVY, SUB } from '../../lib/theme'
 import { SourceTag } from '../SourceTag'
+import { ErrorState, Loading } from '../ApiStatus'
 
 interface ClustersScreenProps {
   mostrarOrigem: boolean
 }
 
 export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
-  const { bubbles, bubGridX, bubGridY } = computeBolhas()
-  const clusters = computeClustersCards()
+  const { data, loading, error } = useApi(() => getClusters(), [])
+
+  if (loading) return <Loading />
+  if (error || !data) return <ErrorState error={error ?? 'sem dado'} />
+
+  const { bubbles, bubGridX, bubGridY } = computeBolhas(data.clusters)
+  const clusters = computeClustersCards(data.clusters)
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Perfis operacionais — duração × violação × volume</span>
+            <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Perfis operacionais — duração × tempo excedido × volume</span>
             <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
-              Eixo X duração média (h) · eixo Y taxa de violação de OLA (%) · área da bolha = % do volume total
+              Eixo X duração média (h) · eixo Y % excedeu tempo esperado da prioridade · área da bolha = % do volume total
             </span>
           </div>
           <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · K-MEANS</SourceTag>
         </div>
+        <p style={{ margin: '0 0 16px', font: '400 12px/1.5 Inter,sans-serif', color: MUTED }}>
+          {data.nota_metrica_sla}
+        </p>
         <svg viewBox="0 0 900 360" style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
           {bubGridY.map((g, i) => (
             <line key={i} x1={60} x2={880} y1={g.y} y2={g.y} stroke="rgba(10,22,40,.07)" strokeWidth={1} />
@@ -92,7 +103,7 @@ export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
                 <span style={{ font: "500 12px/1 'JetBrains Mono',monospace", color: NAVY }}>{c.dur}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ font: '400 11px/1 Inter,sans-serif', color: SUB }}>Violação de OLA</span>
+                <span style={{ font: '400 11px/1 Inter,sans-serif', color: SUB }}>Excedeu tempo esperado</span>
                 <span style={{ font: "500 12px/1 'JetBrains Mono',monospace", color: c.chipFg }}>{c.viol}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>

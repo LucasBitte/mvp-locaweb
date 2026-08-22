@@ -26,7 +26,7 @@ function App() {
         {tab === 2 && <KpiScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
         {tab === 3 && <FatoresScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
         {tab === 4 && <ClustersScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
-        {tab === 5 && <AlertasScreen mostrarOrigem={MOSTRAR_ORIGEM} limiarCritico={LIMIAR_CRITICO_PCT} />}
+        {tab === 5 && <AlertasScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
       </main>
     </div>
   )

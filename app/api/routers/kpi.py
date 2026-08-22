@@ -39,6 +39,7 @@ class IndicadorKpi(BaseModel):
     indicador: Literal["ola_quebrado", "volume_tratado"]
     contagem_acumulada_ano: int
     faixa: Faixa
+    faixas: list[Faixa]
     status: Literal["dentro_da_meta", "atencao", "critico"]
     probabilidade_atingir_meta_pct: float
     metodologia_probabilidade: str = "projecao_linear"
@@ -123,6 +124,30 @@ def get_kpi(
                     ordem_faixa=faixa_dict["ordem_faixa"],
                 )
 
+                # As 6 faixas da combinação (prioridade, indicador) — o frontend
+                # (tela KPI) precisa delas todas para desenhar a grade de faixas
+                # completa, não só a que bateu com a contagem atual.
+                faixas_rows = conn.execute(
+                    text(
+                        """
+                        SELECT faixa_min, faixa_max, pct_atingimento, ordem_faixa
+                        FROM dw.ref_meta_sla_anual
+                        WHERE prioridade_num = :p AND indicador = :ind
+                        ORDER BY ordem_faixa
+                        """
+                    ),
+                    {"p": prioridade_num, "ind": indicador},
+                ).mappings().all()
+                faixas = [
+                    Faixa(
+                        faixa_min=r["faixa_min"],
+                        faixa_max=r["faixa_max"],
+                        pct_atingimento=float(r["pct_atingimento"]),
+                        ordem_faixa=r["ordem_faixa"],
+                    )
+                    for r in faixas_rows
+                ]
+
                 meta_referencia = conn.execute(
                     text(
                         """
@@ -146,6 +171,7 @@ def get_kpi(
                         indicador=indicador,
                         contagem_acumulada_ano=contagem,
                         faixa=faixa,
+                        faixas=faixas,
                         status=_status_de_pct_atingimento(faixa.pct_atingimento),
                         probabilidade_atingir_meta_pct=round(probabilidade, 1),
                     )

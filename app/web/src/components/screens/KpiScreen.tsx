@@ -1,6 +1,9 @@
-import { computeBandasMeta } from '../../data/dashboardData'
+import { getKpi } from '../../lib/api'
+import { useApi } from '../../lib/useApi'
+import { computeBandasMeta, computeKpiResumo, computeProbabilidadeMeta } from '../../data/dashboardData'
 import { MUTED, NAVY, SUB } from '../../lib/theme'
 import { SourceTag } from '../SourceTag'
+import { ErrorState, Loading } from '../ApiStatus'
 
 const cardStyle = {
   background: '#FFFFFF',
@@ -19,66 +22,79 @@ interface KpiScreenProps {
 }
 
 export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
-  const bands = computeBandasMeta()
+  const { data, loading, error } = useApi(() => getKpi(), [])
+
+  if (loading) return <Loading />
+  if (error || !data) return <ErrorState error={error ?? 'sem dado'} />
+
+  const bands = computeBandasMeta(data.indicadores)
+  const resumo = computeKpiResumo(data)
+  const probabilidades = computeProbabilidadeMeta(data)
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 20 }}>
         <div style={cardStyle}>
-          <span style={kicker}>Dias decorridos · dezembro 2025</span>
+          <span style={kicker}>Dias decorridos · {resumo.ano}</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-            <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>31</span>
-            <span style={{ font: "500 15px/1 'JetBrains Mono',monospace", color: SUB }}>/ 31</span>
+            <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>{resumo.diasDecorridos}</span>
+            <span style={{ font: "500 15px/1 'JetBrains Mono',monospace", color: SUB }}>/ {resumo.diasTotais}</span>
           </div>
           <div style={{ height: 8, borderRadius: 4, background: '#F0F3FF', overflow: 'hidden' }}>
-            <div style={{ width: '100%', height: '100%', background: '#1E6FD9' }} />
+            <div style={{ width: `${(resumo.diasDecorridos / resumo.diasTotais) * 100}%`, height: '100%', background: '#1E6FD9' }} />
           </div>
-          <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>0 dias restantes · contagem de calendário puro, sem modelo</span>
+          <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>
+            {resumo.diasRestantes} dias restantes · âncora temporal do pipeline, não a data real
+          </span>
         </div>
 
         <div style={cardStyle}>
-          <span style={kicker}>OLA quebrados no mês</span>
+          <span style={kicker}>OLA quebrados no ano</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>583</span>
-            <span style={{ font: '500 13px/1 Inter,sans-serif', color: SUB }}>de 3.180</span>
+            <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>{resumo.totalQuebras}</span>
+            <span style={{ font: '500 13px/1 Inter,sans-serif', color: SUB }}>P2 + P3</span>
           </div>
-          <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>Contagem sobre base histórica 2025</span>
-          <SourceTag variant="historico" visible={mostrarOrigem}>HISTÓRICO · DW</SourceTag>
+          <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>{resumo.quebrasPorPrioridade}</span>
+          <SourceTag variant="historico" visible={mostrarOrigem}>HISTÓRICO · DW · kpi_status_int</SourceTag>
         </div>
 
         <div style={cardStyle}>
-          <span style={kicker}>% OLA quebrado no mês</span>
-          <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: '#8a6210' }}>18,3%</span>
-          <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>Calculado a partir da posição na faixa anual</span>
+          <span style={kicker}>Status geral</span>
+          <span style={{ font: '700 32px/1 Manrope,sans-serif', letterSpacing: '-.02em', color: resumo.statusGeral.fg }}>
+            {resumo.statusGeral.label}
+          </span>
+          <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>Pior status entre as 4 combinações prioridade × indicador</span>
           <SourceTag visible={mostrarOrigem}>REGRA · FAIXA ANUAL</SourceTag>
         </div>
 
         <div style={cardStyle}>
-          <span style={kicker}>% volume tratado no mês</span>
-          <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: '#0F9D58' }}>81,7%</span>
-          <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>Complemento do percentual quebrado na mesma faixa</span>
-          <SourceTag visible={mostrarOrigem}>REGRA · FAIXA ANUAL</SourceTag>
+          <span style={kicker}>Probabilidade média — OLA quebrado</span>
+          <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>{resumo.probabilidadeMedia}%</span>
+          <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>Média P2/P3 — projeção linear, não modelo estatístico</span>
+          <SourceTag visible={mostrarOrigem}>PROJEÇÃO LINEAR</SourceTag>
         </div>
       </div>
 
       <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={cardTitle}>Meta anual de OLA por prioridade</span>
+            <span style={cardTitle}>Meta anual por prioridade × indicador</span>
             <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
-              Seis faixas contíguas de <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>ref_meta_sla_anual</span> ·{' '}
-              <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>pct_atingimento</span> 150 / 125 / 100 / 75 / 50 / 0%
+              Seis faixas contíguas de <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>ref_meta_sla_anual</span> — só existe
+              meta para P2/P3, <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>pct_atingimento</span> 150/125/100/75/50/0%
             </span>
           </div>
           <SourceTag visible={mostrarOrigem}>REGRA · TABELA DE REFERÊNCIA</SourceTag>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {bands.map((b) => (
-            <div key={b.prio} style={{ display: 'grid', gridTemplateColumns: '150px 1fr', gap: 20, alignItems: 'center' }}>
+            <div key={b.key} style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: 20, alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <span style={{ font: "700 15px/1 'JetBrains Mono',monospace", color: NAVY }}>{b.prio}</span>
+                <span style={{ font: "700 14px/1.3 'JetBrains Mono',monospace", color: NAVY }}>
+                  {b.prio} · {b.indicadorLabel}
+                </span>
                 <span style={{ font: '400 11px/1.3 Inter,sans-serif', color: SUB }}>
-                  quebra atual <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, color: NAVY }}>{b.cur}</span>
+                  acumulado <span style={{ fontFamily: "'JetBrains Mono',monospace", fontWeight: 500, color: NAVY }}>{b.cur}</span>
                 </span>
                 <span
                   style={{
@@ -118,26 +134,28 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
         </div>
       </div>
 
-      <div style={{ background: '#F0F3FF', borderRadius: 16, padding: '26px 28px', display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1.25fr)', gap: 32, alignItems: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <span style={kicker}>Probabilidade de atingir a meta anual</span>
-          <span style={{ font: '700 34px/1 Manrope,sans-serif', letterSpacing: '-.02em', color: '#0F9D58' }}>Dentro da meta</span>
-          <span style={{ font: "500 14px/1.4 'JetBrains Mono',monospace", color: MUTED }}>projeção 7.624 · teto 8.288 · 92,0% do teto</span>
-          <SourceTag visible={mostrarOrigem}>PROJEÇÃO LINEAR — NÃO É MODELO ESTATÍSTICO</SourceTag>
-        </div>
-        <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <span style={{ font: '600 11px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.06em', color: SUB }}>
-            Como o número é calculado
-          </span>
-          <span style={{ font: "500 14px/1.7 'JetBrains Mono',monospace", color: NAVY }}>
-            (quebras_ate_agora ÷ dias_decorridos) × dias_totais_do_ano
-          </span>
-          <span style={{ font: "500 13px/1.7 'JetBrains Mono',monospace", color: MUTED }}>(7.624 ÷ 365) × 365 = 7.624</span>
-          <div style={{ height: 1, background: 'rgba(10,22,40,.08)' }} />
-          <span style={{ font: '400 12px/1.5 Inter,sans-serif', color: MUTED }}>
-            Extrapolação aritmética do ritmo observado. Não usa Poisson, não usa aprendizado de máquina e não produz intervalo de confiança.
-          </span>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 20 }}>
+        {probabilidades.map((p) => (
+          <div
+            key={p.prio}
+            style={{
+              background: '#F0F3FF',
+              borderRadius: 16,
+              padding: '24px 26px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}
+          >
+            <span style={kicker}>Probabilidade de ficar dentro da meta anual — {p.prio}</span>
+            <span style={{ font: '700 30px/1 Manrope,sans-serif', letterSpacing: '-.02em', color: p.statusColor }}>{p.status}</span>
+            <span style={{ font: "600 22px/1 'JetBrains Mono',monospace", color: NAVY }}>{p.probabilidade}%</span>
+            <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ font: "500 12px/1.6 'JetBrains Mono',monospace", color: MUTED }}>{p.calculo}</span>
+            </div>
+            <SourceTag visible={mostrarOrigem}>PROJEÇÃO LINEAR — NÃO É MODELO ESTATÍSTICO</SourceTag>
+          </div>
+        ))}
       </div>
     </section>
   )
