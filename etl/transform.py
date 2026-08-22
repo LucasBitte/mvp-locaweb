@@ -228,32 +228,70 @@ def construir_fato(df: pd.DataFrame) -> pd.DataFrame:
     return fato
 
 
-def carregar(engine, tabelas: dict[str, pd.DataFrame]) -> None:
-    with engine.begin() as conn:
-        conn.execute(text("TRUNCATE dw.fct_incidentes"))
-        for nome in [
-            "dim_produto_categoria",
-            "dim_grupo",
-            "dim_tempo",
-            "dim_status",
-            "dim_prioridade",
-            "dim_abertura",
-        ]:
-            conn.execute(text(f"TRUNCATE dw.{nome} CASCADE"))
+# (tabela, coluna PK, colunas não-PK a atualizar em conflito) — cobre as 6
+# dimensões + a fato, nessa ordem (fato tem FK NOT NULL para todas as dims).
+UPSERT_SPEC: list[tuple[str, str, list[str]]] = [
+    ("dim_produto_categoria", "dim_produto_categoria_sk",
+     ["produto", "categoria", "subcategoria"]),
+    ("dim_grupo", "dim_grupo_sk", ["grupo_designado"]),
+    ("dim_tempo", "dim_tempo_sk", [
+        "data_abertura", "ano", "mes_num", "nome_mes", "semana_ano",
+        "trimestre", "ano_mes", "dia_semana_num", "nome_dia", "is_fim_de_semana",
+    ]),
+    ("dim_status", "dim_status_sk", ["status", "codigo_fechamento", "entrou_kpi"]),
+    ("dim_prioridade", "dim_prioridade_sk", [
+        "prioridade_num", "prioridade_texto", "bucket_prioridade",
+        "nivel_criticidade", "threshold_sla_horas",
+    ]),
+    ("dim_abertura", "dim_abertura_sk", [
+        "aberto_at", "hora_abertura", "turno_abertura",
+        "fora_horario_comercial", "abriu_fim_de_semana",
+    ]),
+    ("fct_incidentes", "incident_sk", [
+        "dim_produto_categoria_sk", "dim_grupo_sk", "dim_tempo_sk", "dim_status_sk",
+        "dim_prioridade_sk", "dim_abertura_sk", "incident_id", "duracao_horas",
+        "duracao_minutos", "kpi_status_int", "target_risco_sla", "exige_intervencao",
+        "possui_pai", "horas_ate_resolucao", "foi_resolvido", "is_filho_de_problema",
+        "triagem_incompleta", "fechado_sem_tecnico", "excedeu_tempo_esperado",
+        "score_risco_operacional", "aberto_at", "resolvido_at", "encerrado_at",
+    ]),
+]
 
-    for nome in [
-        "dim_produto_categoria",
-        "dim_grupo",
-        "dim_tempo",
-        "dim_status",
-        "dim_prioridade",
-        "dim_abertura",
-        "fct_incidentes",
-    ]:
-        tabelas[nome].to_sql(
-            nome, engine, schema="dw", if_exists="append", index=False
-        )
-        print(f"  {nome}: {len(tabelas[nome]):,} linhas")
+
+def _upsert_via_staging(conn, df: pd.DataFrame, schema: str, tabela: str,
+                         pk_col: str, update_cols: list[str]) -> None:
+    """UPSERT de df em schema.tabela via tabela de staging descartável, na
+    mesma conexao/transacao do INSERT final -- sem TRUNCATE em nenhum ponto.
+
+    Necessario porque tabelas em outros schemas (ex.: ml.fct_risco_incidente,
+    ml.fct_shap_incidente) tem FK para dw.fct_incidentes -- TRUNCATE nela sem
+    CASCADE falha, e CASCADE apagaria essas saidas de modelo como efeito
+    colateral (ver docs/modelo-dimensional.md, secao do bug de infraestrutura).
+    Como toda *_sk e MD5 deterministico de uma chave natural estavel, UPSERT
+    é idempotente: mesma linha de entrada sempre resolve para o mesmo PK.
+    """
+    stage = f"_stage_{tabela}"
+    cols = [pk_col] + update_cols
+    df[cols].to_sql(stage, conn, schema=schema, if_exists="replace", index=False)
+    col_list = ", ".join(cols)
+    set_clause = ", ".join(f"{c} = EXCLUDED.{c}" for c in update_cols)
+    conn.execute(text(f"""
+        INSERT INTO {schema}.{tabela} ({col_list})
+        SELECT {col_list} FROM {schema}.{stage}
+        ON CONFLICT ({pk_col}) DO UPDATE SET {set_clause}
+    """))
+    conn.execute(text(f"DROP TABLE {schema}.{stage}"))
+
+
+def carregar(engine, tabelas: dict[str, pd.DataFrame]) -> None:
+    """UPSERT idempotente das 6 dimensões + fato -- nunca faz DELETE de uma
+    incident_sk que deixou de aparecer numa extração nova (população é
+    histórica/imutável na prática; se isso mudar, ver nota acima sobre a
+    trava de FK antes de encadear qualquer DELETE)."""
+    with engine.begin() as conn:
+        for nome, pk, cols in UPSERT_SPEC:
+            _upsert_via_staging(conn, tabelas[nome], "dw", nome, pk, cols)
+            print(f"  {nome}: upsert de {len(tabelas[nome]):,} linhas")
 
 
 def main() -> None:
@@ -278,7 +316,7 @@ def main() -> None:
         "fct_incidentes": construir_fato(silver),
     }
 
-    print("Carregando no schema dw (truncate + insert)...")
+    print("Carregando no schema dw (upsert)...")
     carregar(engine, tabelas)
     print("OK.")
 
