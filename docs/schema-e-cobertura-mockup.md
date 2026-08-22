@@ -85,7 +85,7 @@ gap estrutural).
 |---|---|---|---|
 | Card P2 "previstos amanhã" | `ml.fct_previsao_prioridade` (`prioridade_num=2`, D+1) | ✅ | |
 | Card P2 "SLA 4h" | `dw.dim_prioridade.threshold_sla_horas` | ✅ | o mockup estava certo — **4h é o valor oficial**. `dw.dim_prioridade` tinha 8h por um bug (dict de threshold nunca conferido contra o Dicionário de Dados oficial), corrigido em 2026-08-21 (ver `docs/modelo-dimensional.md`). |
-| Card P2 "72% do limite mensal" | `dw.ref_meta_sla_anual` | ❌ | tabela não existe; além disso a meta do mockup é **anual** (31/ano), não mensal — precisa decidir como derivar um % mensal a partir de uma meta anual |
+| Card P2 "72% do limite mensal" | `dw.ref_meta_sla_anual` | ⚠️ | tabela existe (24 linhas, real), mas a meta é **anual**, medida por faixa de contagem acumulada — não existe "limite mensal" como conceito próprio; precisa decidir como a API deriva um "% do mês" a partir da posição na faixa anual (`etl/ref_meta_sla.py::faixa_meta_sla`) |
 | Card P3 "SLA 12h" | `dw.dim_prioridade.threshold_sla_horas` | ✅ | o mockup estava certo — **12h é o valor oficial** (real anterior era 24h, mesmo bug corrigido em 2026-08-21) |
 | "Top 5 categorias — volume previsto amanhã" | `ml.fct_previsao_categoria` (D+1, top 5 por `yhat_categoria`) | ✅ | 987 linhas já populadas, cobre várias categorias/dias |
 
@@ -95,9 +95,9 @@ gap estrutural).
 |---|---|---|---|
 | "Dias decorridos / restantes" (do mês) | nenhuma — é calendário puro | ✅ (computado) | lógica de data, não precisa de tabela |
 | "OLA Quebrados" (mês) | `dw.fct_incidentes` (`target_risco_sla`/`kpi_status_int`) agregado por `dw.dim_tempo` | ✅ | mas a base é histórica (até 2025-12-31), não um fluxo de chamados ao vivo — "mês" precisa vir como parâmetro de referência, não "hoje" real |
-| "Meta: máx 31/201 quebras por ano" | `dw.ref_meta_sla_anual` | ❌ | **tabela não existe** — já sinalizado no plano da Etapa 5 como placeholder do mockup |
-| "% OLA quebrado (mês)" / "% volume tratado (mês)" | idem, depende da meta | ❌ | bloqueado pela mesma tabela ausente |
-| "Probabilidade de atingir meta anual" | nenhuma — nem modelo, nem tabela | ❌ | não é saída de ML hoje; o plano da Etapa 5 já prevê isso como heurística (projeção linear + Poisson) a implementar na API, com aviso explícito de que não é ML |
+| "Meta: máx 31/201 quebras por ano" | `dw.ref_meta_sla_anual` (`indicador='ola_quebrado'`) | ✅ | tabela real com 6 faixas por prioridade (não só o número de topo do mockup) — a API expõe a faixa inteira via `etl/ref_meta_sla.py::faixa_meta_sla()`, não só um booleano "bateu/não bateu" |
+| "% OLA quebrado (mês)" / "% volume tratado (mês)" | `dw.fct_incidentes` (contagem acumulada) + `dw.ref_meta_sla_anual` (faixa) | ⚠️ | dado e lookup existem; falta decidir a metodologia de "% do mês" a partir de uma meta anual por faixa (não é um simples `atual/meta`) |
+| "Probabilidade de atingir meta anual" | nenhuma — nem modelo, nem tabela | ❌ | não é saída de ML hoje; segue fora de escopo — depende de decisão de metodologia (projeção linear? Poisson?), a implementar na API com aviso explícito de que não é ML |
 
 ### Ecrã 4 — Fatores
 
@@ -127,10 +127,11 @@ gap estrutural).
 
 ## Resumo — gaps que precisam de decisão antes/durante a Etapa 5
 
-1. **`dw.ref_meta_sla_anual` não existe.** Bloqueia parte do Ecrã 2 (% do limite
-   mensal) e do Ecrã 3 (meta anual, % quebrado, % tratado, probabilidade). Migration
-   ainda por criar, com os números do mockup como placeholder explicitamente
-   sinalizado na UI (não como dado real).
+1. ~~`dw.ref_meta_sla_anual` não existe~~ — **resolvido em 2026-08-21**: criada com
+   24 linhas reais (Dicionário de Dados oficial do desafio, não placeholder do
+   mockup), lookup de faixa pronto em `etl/ref_meta_sla.py`. Falta só decidir a
+   metodologia de "% do mês"/"% do limite mensal" a partir de uma meta anual por
+   faixa — isso é trabalho de implementação da Etapa 5, não de dado.
 2. ~~Thresholds de SLA do mockup divergem dos valores reais~~ — **resolvido em
    2026-08-21**: o mockup estava certo (P2=4h, P3=12h); o erro era em
    `dw.dim_prioridade.threshold_sla_horas` (tinha 8h/24h), corrigido — ver
