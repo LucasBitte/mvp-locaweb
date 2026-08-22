@@ -175,12 +175,12 @@ Populadas por `notebooks/05_ml_feature_marts.ipynb` a partir de
   valor oficial usado em `dw.fct_incidentes` desde a correção de 2026-08-21
   (ver `docs/modelo-dimensional.md`) — não é mais uma divergência.
 - `excedeu_tempo_esperado` (aqui) / `target_excedeu_tempo` (em
-  `ml_sla_classification_dataset`) **ainda usam os thresholds antigos e
-  incorretos** (P1=4h/P2=8h/P3=24h/P4=72h, sem meta para P5) — só
-  `dw.fct_incidentes.excedeu_tempo_esperado` foi corrigido. Esta coluna é o
-  rótulo de treino do XGBoost (`ml.fct_risco_incidente`); corrigi-la exige
-  retreinar o modelo, então a correção foi deliberadamente adiada para uma
-  tarefa separada (ver `docs/modelo-dimensional.md`).
+  `ml_sla_classification_dataset`) — **corrigido em 2026-08-22** para os
+  thresholds oficiais (P1=4h/P2=4h/P3=12h/P4=24h/P5=96h), mesmo valor de
+  `dw.fct_incidentes.excedeu_tempo_esperado`. Como essa coluna é o rótulo de
+  treino do XGBoost, a correção da mart veio junto com o retreino do modelo
+  (`ml.fct_risco_incidente` e as demais saídas do XGBoost) — ver
+  `docs/modelo-dimensional.md`.
 
 ### `ml.ml_base_features`
 1 linha por incidente (41.441, mesma população de `staging.incidentes_silver`).
