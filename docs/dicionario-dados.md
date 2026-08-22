@@ -114,7 +114,8 @@ Tabela transacional bruta. 1 linha = 1 chamado. 122.543 linhas (2023-2025).
 ### `dw.fct_incidentes`
 Fato central. **1 linha = 1 incidente** que exigiu esforço humano real
 (`status <> 'Sem Intervenção'`) e foi aberto a partir de 2025-01-01.
-41.441 linhas.
+41.441 linhas. Carga via **UPSERT** (`ON CONFLICT (incident_sk) DO UPDATE`,
+não truncate+insert — ver `docs/modelo-dimensional.md`).
 
 | Coluna | Tipo | Descrição |
 |---|---|---|

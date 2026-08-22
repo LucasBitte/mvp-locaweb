@@ -94,19 +94,41 @@ XGBoost (`ml.fct_risco_incidente`), então corrigi-la exige retreinar o
 modelo, não só recalcular a mart. Decisão registrada: retreino fica para uma
 tarefa separada.
 
-**Bug de infraestrutura descoberto durante a correção**: `TRUNCATE
-dw.fct_incidentes` (usado tanto por `etl/transform.py` quanto pelo notebook
-04) passou a falhar com `FeatureNotSupported` desde que `ml.fct_risco_incidente`
-ganhou uma FK para `dw.fct_incidentes` (migration 021, Etapa 4) — TRUNCATE
-não permite referências de FK sem CASCADE, e um CASCADE ali apagaria as
-41.441 linhas de score do XGBoost como efeito colateral. Por isso esta
-correção foi aplicada via `UPDATE` cirúrgico em vez de rodar o reload padrão
-(`python -m etl.transform`). **Os dois scripts de reload de `dw.*` estão
-com essa trava pré-existente e não puderam ser re-executados ponta a ponta
-para validar esta correção** — ela foi validada com queries diretas
-antes/depois no banco (ver PR) e com o notebook 04 revisado apenas na
-fonte, não executado. Fica como débito técnico a resolver antes da próxima
-vez que `dw.*` precisar de uma recarga completa (truncate+insert real).
+**Bug de infraestrutura descoberto durante a correção — ~~resolvido em
+2026-08-22~~**: `TRUNCATE dw.fct_incidentes` (usado tanto por
+`etl/transform.py` quanto pelo notebook `04_dw_star_schema.ipynb`) passou a
+falhar com `FeatureNotSupported` desde que `ml.fct_risco_incidente` e
+`ml.fct_shap_incidente` ganharam FK para `dw.fct_incidentes` (migrations
+021/022, Etapa 4) — TRUNCATE não permite referências de FK sem CASCADE, e
+um CASCADE ali apagaria as saídas do XGBoost/SHAP como efeito colateral.
+
+Correção: os dois caminhos de recarga passaram de truncate+insert para
+**UPSERT** (`INSERT ... ON CONFLICT (<sk>) DO UPDATE SET ...`) nas 6
+dimensões + fato — nunca mais há `TRUNCATE` em `dw.*`. Toda `*_sk` é `MD5`
+determinístico de uma chave natural estável, então UPSERT é idempotente: a
+mesma linha de entrada sempre resolve para o mesmo PK.
+`etl/transform.py::carregar()` usa um helper de staging table (escreve o
+DataFrame numa tabela descartável, um único `INSERT...SELECT...ON CONFLICT`
+contra a real, tudo na mesma transação); o notebook usa `ON CONFLICT`
+direto no `INSERT...SELECT` de cada célula.
+
+Validado rodando os dois caminhos **duas vezes seguidas**: `dw.fct_incidentes`
+e as 6 dimensões ficam com a mesma contagem nas duas rodadas (41.441 na
+fato), e `ml.fct_risco_incidente`/`ml.fct_shap_incidente` ficaram com
+`data_execucao` **idêntico** antes e depois — prova de que a recarga não as
+tocou. 0 FKs órfãs.
+
+**Efeito colateral descoberto**: como UPSERT nunca faz `DELETE`, a primeira
+rodada revelou 3 linhas órfãs em `dw.dim_status` (combinações de
+`status`/`codigo_fechamento` que não existem mais em
+`staging.incidentes_silver`, provavelmente de uma carga anterior a este
+histórico) — sem nenhum `dw.fct_incidentes` referenciando-as, então
+removidas manualmente uma única vez. **Premissa aceita daqui em diante**:
+esta carga não apaga uma `*_sk` que deixou de aparecer numa extração nova
+— população é histórica/imutável na prática. Se uma dimensão inteira
+precisar de limpeza de novo, é uma operação manual pontual, não automática
+(um `DELETE` automático bateria na mesma trava de FK que motivou este fix,
+para `dw.fct_incidentes`).
 
 ## `dw.ref_meta_sla_anual` (2026-08-21)
 
