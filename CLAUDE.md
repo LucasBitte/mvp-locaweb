@@ -29,6 +29,7 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/03_bronze_silver_t
 jupyter nbconvert --to notebook --execute --inplace notebooks/04_dw_star_schema.ipynb
 jupyter nbconvert --to notebook --execute --inplace notebooks/05_ml_feature_marts.ipynb
 python notebooks/forecast_incidentes_revisado.py --fonte sql
+python notebooks/forecast_equipe.py --fonte sql       # depende do passo anterior (mesma origem)
 jupyter nbconvert --to notebook --execute --inplace notebooks/model_clustering_kmeans_Revisado.ipynb
 jupyter nbconvert --to notebook --execute --inplace notebooks/model_risk_xgboost_.ipynb
 
@@ -67,6 +68,7 @@ Documentação completa: [`docs/dicionario-dados.md`](docs/dicionario-dados.md) 
 | Modelo | Lê de | Grava em | Cobertura |
 |---|---|---|---|
 | Prophet (forecast) | `ml.ml_forecast_dataset` | `ml.fct_previsao_diaria_total/_prioridade/_categoria` | D+1..D+7, append por execução |
+| Prophet por equipe (forecast) | `ml.ml_base_features` (roda depois do forecast total, mesma origem) | `ml.fct_previsao_grupo` | D+1..D+7, 16 equipes, append por execução — arquitetura híbrida A/B/C, ver `docs/modelo-dimensional.md` |
 | K-Means (clusters) | `ml.ml_cluster_dataset` | `ml.dim_cluster` (4 clusters, seed manual) + `ml.fct_perfil_cluster` | 41.441 incidentes clusterizados |
 | XGBoost + SHAP (risco) | `ml.ml_sla_classification_dataset` + `ml.ml_base_features` | `ml.fct_importancia_feature`, `ml.fct_risco_incidente`, `ml.fct_shap_incidente` | 41.441 incidentes com score; SHAP nos 30 de maior risco |
 
@@ -125,7 +127,7 @@ mvp-locaweb/
 
 ## 10. Erros recorrentes já corrigidos (adicionar aqui sempre que acontecer de novo)
 
-- *(vazio ainda — preencher conforme surgirem correções repetidas)*
+- **Detector de "quebra de patamar" (`validar_serie`, `notebooks/forecast_incidentes_revisado.py`) pode apontar o último dia da série.** Em séries mais curtas/ruidosas que o total (ex.: forecast por equipe), a razão de medianas móveis de 28 dias pode disparar bem perto do fim da série. Se usada sem checagem, `inicio_treino` fica tão perto do fim que não sobra runway para a 1ª origem do backtest (45 dias) + horizonte (7 dias) → backtest vazio → `AttributeError: 'DataFrame' object has no attribute 'yhat'`. Corrigido em `notebooks/forecast_equipe.py` (`RUNWAY_MINIMO_DIAS`): só aplica a quebra detectada se sobrar pelo menos 52 dias até o fim da série; senão ignora e usa o histórico completo. Qualquer novo uso de `validar_serie`/`quebras_de_patamar_detectadas` num script novo precisa da mesma guarda.
 
 ## 11. Onde procurar mais contexto
 
