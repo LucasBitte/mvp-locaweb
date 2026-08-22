@@ -3,6 +3,19 @@
 > Status: proposto. Cobre `app/api/` — Painel, Detalhe, KPI, Fatores, Clusters, Alertas
 > (`docs/design/aiops_dashboard_redesign.html`). Ver `CLAUDE.md` §4 e §9 para o contexto
 > das limitações de escopo referenciadas abaixo.
+>
+> **⚠️ Atualização (2026-08-21)**: `dw.ref_meta_sla_anual` **já foi criada** — mas com um
+> schema diferente do sugerido abaixo (`prioridade_num`/`ano`/`meta_quebras_ano`/`fonte`,
+> 2 linhas placeholder). O Dicionário de Dados oficial do desafio define a meta anual como
+> uma **tabela de 6 faixas por indicador** (`ola_quebrado`/`volume_tratado`) × prioridade
+> (P2/P3), cada faixa com um `pct_atingimento` (150/125/100/75/50/0) — 24 linhas reais, não
+> placeholder. Ver `db/migrations/024_dw_ref_meta_sla_anual.sql`,
+> `docs/modelo-dimensional.md` e o lookup pronto em `etl/ref_meta_sla.py`
+> (`faixa_meta_sla(engine, prioridade_num, indicador, contagem_acumulada)`). **Todo trecho
+> abaixo que referencia `meta_quebras_ano`/`is_placeholder_meta`/`fonte='placeholder_mockup'`
+> está desatualizado** e precisa ser revisado contra o schema real antes da implementação
+> desta etapa — o dado agora é oficial, não placeholder, mas a probabilidade de atingir a
+> meta anual continua sendo heurística de projeção (fora de escopo, não implementada).
 
 ## 1. Problema
 

@@ -105,6 +105,40 @@ antes/depois no banco (ver PR) e com o notebook 04 revisado apenas na
 fonte, não executado. Fica como débito técnico a resolver antes da próxima
 vez que `dw.*` precisar de uma recarga completa (truncate+insert real).
 
+## `dw.ref_meta_sla_anual` (2026-08-21)
+
+Tabela de referência (não é fato de ML nem dimensão clássica) com as metas
+anuais de SLA por prioridade, definidas pelo Dicionário de Dados oficial do
+desafio — **dado real de negócio, não placeholder**. Só existem metas para
+P2 (Alta) e P3 (Média), em dois indicadores independentes:
+
+- `ola_quebrado` — contagem anual de incidentes que violaram o SLA;
+- `volume_tratado` — contagem anual de incidentes tratados.
+
+Cada indicador tem 6 faixas contíguas (sem sobreposição) com um
+`pct_atingimento` associado (150/125/100/75/50/0%) e uma `ordem_faixa`
+(1 = melhor, 6 = pior). `faixa_min`/`faixa_max` ficam `NULL` só nas pontas
+abertas (`< N` e `> N`); as demais faixas são inclusivas dos dois lados —
+ex.: P2/`ola_quebrado` tem `< 31` como `(NULL, 30)`, `31 a 35` como
+`(31, 35)`, e assim por diante, até `> 53` como `(54, NULL)`.
+
+A meta é definida em **contagem anual absoluta**, mas o indicador é medido
+mensalmente: não existe uma meta mensal própria — o acompanhamento mensal é
+a posição acumulada do ano-corrente frente a essas faixas anuais.
+
+**Lookup de faixa**: `etl/ref_meta_sla.py`, função
+`faixa_meta_sla(engine, prioridade_num, indicador, contagem_acumulada)`.
+É uma **regra de negócio determinística** (comparação de intervalo, sem
+nenhum modelo estatístico envolvido) — nunca deve ser apresentada como
+"previsão" ou saída de IA no dashboard. 8 testes em
+`tests/test_ref_meta_sla.py` cobrindo os limites de faixa e as duas pontas
+abertas.
+
+**Fora de escopo desta tabela**: a projeção/probabilidade de fechar o ano
+em determinada faixa (ex.: "61% de chance de bater a meta") depende de uma
+decisão de metodologia (projeção linear? Poisson?) ainda não tomada — fica
+para quando a Etapa 5 (API) implementar o endpoint de KPI.
+
 ## Caveats de qualidade de dado (herdados da fonte, não corrigidos)
 
 - `duracao_min`/`duracao_horas` têm outliers extremos (ver

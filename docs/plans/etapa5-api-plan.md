@@ -57,7 +57,28 @@ antes do primeiro push).
 
 ---
 
-### Etapa 1 — Migration `dw.ref_meta_sla_anual` 🛑 CHECKPOINT HUMANO
+### Etapa 1 — Migration `dw.ref_meta_sla_anual` ✅ concluída (2026-08-21, schema revisado)
+
+> **A migration já foi criada e aplicada — com um schema diferente do desenhado abaixo.**
+> O texto original desta seção assumia que a meta de OLA era placeholder do mockup
+> (2 linhas, `meta_quebras_ano` fixo por prioridade/ano). O Dicionário de Dados oficial do
+> desafio (fonte da verdade, não o mockup) define a meta como uma tabela de 6 faixas por
+> indicador (`ola_quebrado`/`volume_tratado`) × prioridade (P2/P3), cada faixa com um
+> `pct_atingimento` — 24 linhas, dado real, não placeholder. Schema aplicado:
+> `db/migrations/024_dw_ref_meta_sla_anual.sql` (`ref_meta_sla_anual_sk`, `prioridade_num`,
+> `indicador`, `faixa_min`, `faixa_max`, `pct_atingimento`, `ordem_faixa`). Lookup de faixa
+> pronto e testado em `etl/ref_meta_sla.py` (`faixa_meta_sla(...)`), 8 testes em
+> `tests/test_ref_meta_sla.py`. Detalhamento completo em `docs/modelo-dimensional.md`.
+>
+> **Impacto nas etapas abaixo**: qualquer trecho deste plano ou do PRD
+> (`docs/prds/etapa5-api.md`) que referencia `meta_quebras_ano`/`is_placeholder_meta`/
+> `fonte='placeholder_mockup'` precisa ser revisado contra o schema real antes de
+> implementar o endpoint correspondente (`GET /api/kpi`, principalmente) — o dado agora é
+> oficial, mas a probabilidade de atingir a meta anual continua sendo heurística de
+> projeção, fora de escopo desta migration.
+
+<details>
+<summary>Texto original do plano (desatualizado — mantido só para histórico)</summary>
 
 **Por quê checkpoint**: esta migration grava os números de meta de OLA (31 quebras/ano
 P2, 201/ano P3) que todo o resto da Etapa 5 vai expor como placeholder — é a primeira vez
@@ -102,6 +123,8 @@ confirmar idempotência (`IF NOT EXISTS` + `ON CONFLICT DO NOTHING` não duplica
 é `DROP TABLE dw.ref_meta_sla_anual` (não há padrão de down-migration no projeto — as 22
 migrations existentes são todas forward-only; se precisar desfazer, é uma migration nova
 de `DROP`, não uma edição da 023).
+
+</details>
 
 ---
 

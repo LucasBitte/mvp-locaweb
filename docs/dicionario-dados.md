@@ -143,6 +143,25 @@ Fato central. **1 linha = 1 incidente** que exigiu esforço humano real
 | `resolvido_at` | timestamp (nulo) | |
 | `encerrado_at` | timestamp | |
 
+### `dw.ref_meta_sla_anual`
+Tabela de referência (não é dimensão nem fato) com as metas anuais de SLA
+por prioridade, do Dicionário de Dados oficial do desafio — dado real, não
+placeholder. Só P2/P3 têm meta. 24 linhas: 2 prioridades × 2 indicadores ×
+6 faixas. Ver `docs/modelo-dimensional.md` para a lógica completa.
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `ref_meta_sla_anual_sk` | text (PK) | `MD5(prioridade_num\|indicador\|faixa_min\|faixa_max)` |
+| `prioridade_num` | smallint | 2 ou 3 |
+| `indicador` | text | `ola_quebrado` (violações no ano) ou `volume_tratado` (chamados no ano) |
+| `faixa_min` | integer (nulo) | `NULL` = sem limite inferior (só na 1ª faixa) |
+| `faixa_max` | integer (nulo) | `NULL` = sem limite superior (só na última faixa) |
+| `pct_atingimento` | numeric | 150 / 125 / 100 / 75 / 50 / 0 |
+| `ordem_faixa` | smallint | 1 (melhor) a 6 (pior) |
+
+Lookup de faixa: `etl/ref_meta_sla.py::faixa_meta_sla()` — regra de negócio
+determinística (não é saída de ML).
+
 ## Marts de features para ML (schema `ml`)
 
 Espelham as antigas marts dbt do projeto AWS (mesma estrutura dos parquets em
