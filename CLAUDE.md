@@ -133,5 +133,60 @@ mvp-locaweb/
 - Raciocínio do modelo dimensional: `docs/modelo-dimensional.md`
 - Mockup do dashboard-alvo: `docs/design/aiops_dashboard_redesign.html`
 
+## 12. Operações aprovadas e proibidas (todos os modos)
+
+Vale para qualquer modo de permissão ativo (`default`, `acceptEdits` ou
+`auto`) — não é uma relaxação específica de modo automático, é a rotina
+esperada do projeto.
+
+### Operações de rotina — não precisam de confirmação extra
+
+- Criar/editar notebooks em `notebooks/`, seguindo a convenção de numeração
+  já estabelecida (`0X_nome.ipynb` ou scripts `.py` paralelos, ex.
+  `forecast_equipe.py`).
+- Criar migrations em `db/migrations/`, seguindo a numeração sequencial e o
+  estilo das migrations existentes (`015`-`021` etc.).
+- Atualizar `docs/dicionario-dados.md` e `docs/modelo-dimensional.md` com
+  novas seções, desde que sigam o estilo já usado (parágrafo + bullets,
+  seções datadas quando aplicável).
+- Rodar notebooks/scripts do pipeline já existentes contra o banco `fiap`
+  em modo leitura ou append (ex. `python notebooks/forecast_*.py --fonte
+  sql`), incluindo escrita em tabelas `ml.*` que já seguem o padrão
+  append/DELETE-por-origem documentado.
+- Criar branch de feature e abrir PR.
+- Rodar linters, testes existentes, `git status`, `git diff`, `git log`.
+
+### Sempre exige confirmação explícita, em qualquer modo
+
+- Qualquer `DROP`, `TRUNCATE` ou `DELETE` sem cláusula `WHERE`/`origem`
+  restritiva em tabelas dos schemas `dw` ou `ml`.
+- Qualquer alteração em `dw.dim_prioridade`, `dw.fct_incidentes` ou
+  qualquer coluna derivada de threshold de SLA — essa área já teve uma
+  correção sensível em andamento (ver `docs/modelo-dimensional.md`,
+  histórico de thresholds) e mudanças aqui não devem ser silenciosas.
+- Push direto ou merge na branch `main` — protegida, só entra por PR com
+  squash-merge, sempre.
+- Qualquer comando que apague arquivos fora de `notebooks/`,
+  `db/migrations/` ou `docs/` (ex. limpeza de diretórios, `rm -rf`, mesmo
+  que pareça "arquivo temporário").
+- Alterar credenciais, variáveis de ambiente, string de conexão do banco,
+  ou qualquer arquivo de configuração de infraestrutura.
+- Retreinar um modelo de ML já em produção (Prophet, K-Means, XGBoost) sem
+  reportar antes o motivo e aguardar aprovação — mesmo que a mudança pareça
+  decorrente de uma correção já aprovada (ex. correção de threshold pode
+  ou não exigir retreino; isso é decisão a reportar, não a tomar sozinho).
+- Misturar mais de uma mudança de escopo (ex. correção de bug + feature
+  nova) no mesmo commit ou PR.
+
+### Notas de contexto para o classificador (modo `auto`)
+
+- Este é um projeto de desafio acadêmico (AIOps FIAP) com dado real de
+  produção conectado — tratar o banco `fiap` com o mesmo cuidado de um
+  ambiente produtivo, não como sandbox descartável.
+- Toda tarefa relevante já chega com um prompt detalhado (arquivo `.md`
+  separado, gerado previamente) contendo escopo, critérios de aceite e o
+  que não fazer — seguir esse escopo à risca é a rotina esperada; sair dele
+  é a exceção que deve gerar pergunta.
+
 ---
-*Última atualização: 2026-08-21.*
+*Última atualização: 2026-08-22.*
