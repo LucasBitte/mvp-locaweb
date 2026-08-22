@@ -97,7 +97,7 @@ Tabela transacional bruta. 1 linha = 1 chamado. 122.543 linhas (2023-2025).
 | `prioridade_texto` | text | Texto original da fonte |
 | `bucket_prioridade` | text | Ex: `"P2 - Alta"` |
 | `nivel_criticidade` | text | `"Critico"` (P1/P2) ou `"Normal"` |
-| `threshold_sla_horas` | integer (nulo) | Meta contratual: P1=4h, P2=8h, P3=24h, P4=72h; P5 sem meta |
+| `threshold_sla_horas` | integer | Meta contratual (Dicionário de Dados oficial do desafio): P1=4h, P2=4h, P3=12h, P4=24h, P5=96h |
 
 ### `dw.dim_abertura`
 1 linha por timestamp distinto de abertura (grão de **timestamp**, não de dia).
@@ -147,11 +147,21 @@ Fato central. **1 linha = 1 incidente** que exigiu esforço humano real
 
 Espelham as antigas marts dbt do projeto AWS (mesma estrutura dos parquets em
 `data/raw/`). Populadas por `notebooks/05_ml_feature_marts.ipynb` a partir de
-`staging.incidentes_silver`. **Divergência de `dw.fct_incidentes`**:
-`target_risco_sla`/`score_risco_operacional` aqui usam o valor já calculado
-pela Silver (heurística original de P2=4h, sem o clamp de `-1`→`0` da Etapa 2)
-— por isso `target_risco_sla` pode valer `-1` (KPI desconhecido) nestas
-tabelas, o que nunca acontece em `dw.fct_incidentes`.
+`staging.incidentes_silver`. **Divergências de `dw.fct_incidentes`**:
+- `target_risco_sla`/`score_risco_operacional` aqui usam o valor já calculado
+  pela Silver, sem o clamp final de `-1`→`0` que `dw.fct_incidentes` aplica —
+  por isso `target_risco_sla` pode valer `-1` (KPI desconhecido, sem
+  heurística aplicável) nestas tabelas, o que nunca acontece em
+  `dw.fct_incidentes`. O threshold de P2 usado na heurística (4h) é o mesmo
+  valor oficial usado em `dw.fct_incidentes` desde a correção de 2026-08-21
+  (ver `docs/modelo-dimensional.md`) — não é mais uma divergência.
+- `excedeu_tempo_esperado` (aqui) / `target_excedeu_tempo` (em
+  `ml_sla_classification_dataset`) **ainda usam os thresholds antigos e
+  incorretos** (P1=4h/P2=8h/P3=24h/P4=72h, sem meta para P5) — só
+  `dw.fct_incidentes.excedeu_tempo_esperado` foi corrigido. Esta coluna é o
+  rótulo de treino do XGBoost (`ml.fct_risco_incidente`); corrigi-la exige
+  retreinar o modelo, então a correção foi deliberadamente adiada para uma
+  tarefa separada (ver `docs/modelo-dimensional.md`).
 
 ### `ml.ml_base_features`
 1 linha por incidente (41.441, mesma população de `staging.incidentes_silver`).
