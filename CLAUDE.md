@@ -106,10 +106,29 @@ Documentação completa: [`docs/dicionario-dados.md`](docs/dicionario-dados.md) 
 - Cada tela chama funções `computeXxx()` puras em `dashboardData.ts` — quando a Etapa 5 (API) existir,
   a troca é só essas chamadas por `fetch`/hooks; o JSX das telas não muda.
 
-**Lacunas ainda abertas (fora do escopo desta rodada — Fases 6-9/11/14/16 do `PLAN.md`):**
-- Endpoints FastAPI servindo dado real para as 6 telas (Etapa 5) — a Etapa 6 (UI) já está adiantada,
-  mas continua consumindo dado estático até a API existir.
-- Pin de versões em `requirements.txt`/`requirements-notebooks.txt` (checkpoint humano, Anexo A/ML-3).
+**API FastAPI implementada (2026-08-22, PLAN.md Fases 6-9/11/14):**
+- 6 endpoints reais em `app/api/routers/` (`painel`, `detalhe`, `kpi`, `fatores`, `clusters`,
+  `alertas`), registrados em `app/api/main.py`, lendo do banco `fiap` via `etl.db.get_engine()`
+  (`app/api/deps.py`). Contrato de dados completo, endpoint a endpoint: `docs/prds/etapa5-api.md`.
+  Testes de contrato em `tests/test_api_<tela>.py` (rodam contra o banco real, só `SELECT`,
+  mesmo padrão de `tests/test_api.py`) — `./venv/bin/python3 -m pytest tests/` (38 testes, ✅).
+- **Ainda não religado ao frontend** — `app/web/` continua consumindo `dashboardData.ts`
+  estático; a troca é substituir as chamadas `computeXxx()` por `fetch` nas 6 telas (Fase 15
+  do `PLAN.md`, não feita nesta rodada).
+- **2 achados de auditoria confirmados ao vivo contra o banco, documentados em
+  `docs/prds/etapa5-api.md` §4.5** (checkpoint humano, nada retreinado/alterado no banco):
+  1. `ml.fct_perfil_cluster.taxa_sla_violado_pct` usa `excedeu_tempo_esperado` (94-98% no
+     banco todo), não o indicador oficial de SLA (`kpi_status_int`, 0,95% no banco todo) —
+     campo exposto pela API como `taxa_excedeu_tempo_esperado_pct` com nota explicativa no
+     payload, nunca como "SLA" sem qualificação.
+  2. `ml.dim_cluster` (taxonomia curada manualmente) diverge das métricas reais de pelo
+     menos 2 dos 4 clusters (cluster B rotulado "curta duração" mas com a maior
+     `duracao_media_horas` real; cluster D rotulado "sem violações" mas com a maior
+     `taxa_excedeu_tempo_esperado_pct`) — não corrigido (decisão de conteúdo, não de
+     código); candidato a novo item do `PLAN.md` Anexo A.
+
+**Pin de versões:**
+- Pin de versões em `requirements.txt`/`requirements-notebooks.txt` (checkpoint humano, Anexo A/ML-3) — ainda em aberto.
 
 ## 5. Estrutura do repositório
 
@@ -155,8 +174,8 @@ mvp-locaweb/
 | 2 | Modelo dimensional (`dw.*`) | ✅ |
 | 3 | Marts de features (`ml.ml_*`) | ✅ |
 | 4 | Modelos de ML rodando contra o banco + output real (`ml.fct_*`) | ✅ |
-| 5 | API FastAPI servindo as 6 telas | ⬜ **próximo passo** |
-| 6 | Dashboard React — 6 telas implementadas, consumindo dado estático (aguarda Etapa 5 para dado real) | 🟡 |
+| 5 | API FastAPI — 6 endpoints implementados e testados contra o banco real (`app/api/routers/`) | 🟡 (falta religar o frontend) |
+| 6 | Dashboard React — 6 telas implementadas, consumindo dado estático (aguarda religar na Etapa 5 para dado real) | 🟡 |
 
 > Antes de iniciar a Etapa 5, ver `PLAN.md` — plano de fechamento de lacunas
 > frente ao desafio (P2/P3 default, pressão por equipe, recorrência, EDA
@@ -176,7 +195,9 @@ mvp-locaweb/
 - EDA consolidada (8 evidências, Achado/Impacto/Decisão): `docs/eda-consolidada.md`
 - Métricas de validação consolidadas (Prophet/XGBoost/K-Means, com achados que exigem decisão humana): `docs/metricas-validacao.md`
 - Changelog das Fases 1-5/10/12/13 (tabelas novas, resultados reais): `docs/changelog-fechamento-lacunas-2026-08-22.md`
+- Changelog da Fase 14 (API FastAPI — endpoints, achados de auditoria, bug do SHAP corrigido): `docs/changelog-fase14-api-2026-08-22.md`
 - Dashboard React (6 telas, dado estático): `app/web/src/components/screens/` — dados em `app/web/src/data/dashboardData.ts`; design de origem no projeto Claude Design "AIOps Dashboard.dc.html" (`claude.ai/design/p/63defcd6-35eb-4d1e-983f-a73f61be15d2`)
+- API FastAPI (6 endpoints, dado real): `app/api/routers/` + contrato completo em `docs/prds/etapa5-api.md`; testes em `tests/test_api_*.py`
 
 ## 12. Operações aprovadas e proibidas (todos os modos)
 

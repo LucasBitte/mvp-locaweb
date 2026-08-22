@@ -253,14 +253,15 @@ Responder: quanto teremos amanhã (D+1)? Quanto em D+7? Há pico (variação
 D+1 vs. média histórica)? Qual o risco de OLA (faixa fixa sobre
 `pct_violacao_sla` de `ml.ml_forecast_dataset`)? Qual equipe está sob maior
 pressão (Fase 3)? Fonte: `ml.fct_previsao_diaria_total` + `ml.ml_forecast_dataset`
-+ `ml.fct_previsao_grupo`.
++ `ml.fct_previsao_grupo`. Contrato de dados completo: `docs/prds/etapa5-api.md` §4.1.
 
 ## Fase 7 — Operação
 
 Responder: P2/P3 estão sob risco (Fase 2 + `ml.fct_risco_incidente`)? Qual
 equipe exige atenção (Fase 3)? Qual categoria/produto lidera volume previsto
 (Fase 4)? Fonte: `ml.fct_previsao_prioridade` + `ml.fct_previsao_categoria` +
-`ml.fct_previsao_grupo` + `dw.dim_prioridade`.
+`ml.fct_previsao_grupo` + `dw.dim_prioridade`. Contrato de dados completo (inclui
+granularidade `produto` e recorrência): `docs/prds/etapa5-api.md` §4.2.
 
 ## Fase 8 — KPI / Metas oficiais
 
@@ -289,7 +290,8 @@ SHAP: `ml.fct_shap_incidente` (top 30 por `score_calibrado`) + `ml.fct_risco_inc
 Pergunta correta: **"por que este incidente possui risco elevado?"** — nunca
 "por que haverá mais chamados amanhã?". Regra semântica permanente:
 Prophet → volume futuro; XGBoost → risco; SHAP → explicação individual do
-risco do XGBoost. Nunca misturar as três.
+risco do XGBoost. Nunca misturar as três. Contrato de dados completo:
+`docs/prds/etapa5-api.md` §4.4.
 
 ## Fase 10 — Clusters / K-Means ✅ diagnóstico executado (2026-08-22)
 
@@ -340,7 +342,8 @@ Regras candidatas (todas com `regra_origem` explícito, sem fallback de CI):
 
 Toda recomendação prescritiva carrega `regra_origem` apontando para qual
 regra a gerou — sem tabela nova, sem dado fora do que já é exposto pelas
-demais telas, sem simular item de configuração (CI).
+demais telas, sem simular item de configuração (CI). Contrato de dados
+completo (catálogo das 5 regras): `docs/prds/etapa5-api.md` §4.6.
 
 ## Fase 12 — EDA ✅ consolidada (2026-08-22)
 
@@ -395,22 +398,34 @@ Não inventar valores — todo número desta fase vem de rodar o
 notebook/script já existente (ou o diagnóstico novo do K-Means) e ler o
 resultado, nunca de estimativa.
 
-## Fase 14 — FastAPI
+## Fase 14 — FastAPI ✅ implementada (2026-08-22)
 
-Planejar (implementação é Etapa 5, fora desta tarefa):
+**Resultado**: os 6 endpoints implementados em `app/api/routers/` (um
+módulo por tela) e registrados em `app/api/main.py`, todos lendo o banco
+`fiap` real via `etl.db.get_engine()` (`app/api/deps.py`), SQL raw via
+`sqlalchemy.text()`, um `pydantic.BaseModel` por endpoint como
+`response_model` — mesma convenção de `docs/prds/etapa5-api.md` (reescrito
+por completo nesta rodada, descontando as partes desatualizadas do PRD
+original). 38 testes de contrato em `tests/test_api_<tela>.py`, ✅ (rodam
+contra o banco real, só `SELECT`). Dois achados de auditoria confirmados
+durante a implementação, sem alterar nenhum dado/modelo — ver Anexo A.4
+(métrica de SLA do cluster renomeada; taxonomia de `ml.dim_cluster`
+divergente das métricas reais). **Ainda não religado ao frontend** — Etapa
+6 (`app/web/`) continua consumindo `dashboardData.ts` estático.
 
 ```
 /api/painel    /api/detalhe   /api/kpi
 /api/fatores   /api/clusters  /api/alertas
 ```
 
-Reaproveitar as decisões já tomadas em `docs/prds/etapa5-api.md` (conexão
-via `etl.db.get_engine()`, SQL raw via `sqlalchemy.text()`, um
-`pydantic.BaseModel` por endpoint como `response_model`) — **descontando**
-as partes já desatualizadas do PRD (`meta_quebras_ano`/
-`is_placeholder_meta`/`fonte='placeholder_mockup'`, que hoje é
-`dw.ref_meta_sla_anual` real com `pct_atingimento` por faixa). Evitar
-endpoints extras sem necessidade — os 6 endpoints acima cobrem as 6 telas.
+Decisões tomadas em `docs/prds/etapa5-api.md` (conexão via
+`etl.db.get_engine()`, SQL raw via `sqlalchemy.text()`, um
+`pydantic.BaseModel` por endpoint como `response_model`) —
+**descontando** as partes já desatualizadas do PRD original
+(`meta_quebras_ano`/`is_placeholder_meta`/`fonte='placeholder_mockup'`,
+que hoje é `dw.ref_meta_sla_anual` real com `pct_atingimento` por faixa,
+já refletido na reescrita do PRD). Evitar endpoints extras sem
+necessidade — os 6 endpoints acima cobrem as 6 telas.
 
 ## Fase 15 — React
 
@@ -517,6 +532,30 @@ guias de referência não específicos deste projeto).
   silhouette, Davies-Bouldin, inertia/elbow (Fase 10). Objetivo: verificar
   se `k=4` é defensável. Se não for → reportar → checkpoint humano → decisão
   sobre retreino. **Nunca retreinar automaticamente.**
+- **K-Means — 2 achados novos confirmados na implementação da Fase 14 (API,
+  2026-08-22), verificados ao vivo contra o banco `fiap`, detalhados em
+  `docs/prds/etapa5-api.md` §4.5:**
+  1. `ml.fct_perfil_cluster.taxa_sla_violado_pct` é calculada a partir de
+     `excedeu_tempo_esperado` (duração > threshold da prioridade), não do
+     indicador oficial de SLA (`kpi_status_int`) — 94-98% nos 4 clusters
+     contra 0,95% do indicador oficial no banco inteiro. Mitigado na API
+     (`app/api/routers/clusters.py`): campo renomeado para
+     `taxa_excedeu_tempo_esperado_pct` + nota explicativa fixa no payload.
+     **Não corrigido na origem** (`ml.fct_perfil_cluster`/notebook) — mudar
+     o que a tabela calcula é retreino/checkpoint humano, fora do escopo da
+     API.
+  2. `ml.dim_cluster` (taxonomia curada manualmente, migration `018`, não
+     recalculada a cada execução do K-Means) diverge das métricas reais de
+     `ml.fct_perfil_cluster` para pelo menos 2 dos 4 clusters: cluster B
+     rotulado `"Recorrentes rápidos"` / `"Curta duração"` mas com a
+     **maior** `duracao_media_horas` real (198,3h); cluster D rotulado
+     `"Baixo impacto"` / `"Sem violações"` mas com a **maior**
+     `taxa_excedeu_tempo_esperado_pct` (98,0%) e a 2ª maior duração (93,8h).
+     **Não corrigido** — reescrever `nome_perfil`/`descricao_curta`/`tags`
+     é decisão de conteúdo/produto, não algo para a API decidir sozinha.
+     Checkpoint humano pendente: revisar a taxonomia de `ml.dim_cluster`
+     contra as métricas reais antes da tela Clusters ir ao ar com dado real
+     (Etapa 6 religada à Etapa 5).
 
 ### A.5 shap
 
