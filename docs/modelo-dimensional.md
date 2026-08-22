@@ -169,10 +169,18 @@ nenhum modelo estatístico envolvido) — nunca deve ser apresentada como
 `tests/test_ref_meta_sla.py` cobrindo os limites de faixa e as duas pontas
 abertas.
 
-**Fora de escopo desta tabela**: a projeção/probabilidade de fechar o ano
-em determinada faixa (ex.: "61% de chance de bater a meta") depende de uma
-decisão de metodologia (projeção linear? Poisson?) ainda não tomada — fica
-para quando a Etapa 5 (API) implementar o endpoint de KPI.
+**Fora de escopo desta tabela**: a projeção/probabilidade de fechar o ano em
+determinada faixa (ex.: "61% de chance de bater a meta") não é calculada
+aqui — fica para o endpoint `GET /api/kpi` (Etapa 5). **A decisão de
+metodologia já foi tomada** (projeção linear determinística, não Poisson
+nem outro modelo estatístico):
+`probabilidade_atingir_meta_pct = (quebras_ate_agora / dias_decorridos) *
+dias_totais_do_ano`, comparado a `meta_quebras_ano`, com
+`metodologia_probabilidade="projecao_linear"` sempre presente no payload —
+ver `docs/prds/etapa5-api.md` seção 4.3 e `docs/plans/etapa5-api-plan.md`
+Etapa 4. O que falta não é decidir a metodologia, é **implementar o
+endpoint** — trabalho da Etapa 5, com checkpoint humano próprio já definido
+no plano.
 
 ## Caveats de qualidade de dado (herdados da fonte, não corrigidos)
 
