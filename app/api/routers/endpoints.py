@@ -231,21 +231,21 @@ def get_clusters():
                 p.n_incidentes,
                 p.pct_volume,
                 p.duracao_media_horas,
-                p.taxa_sla_violado_pct,
+                p.taxa_excedeu_tempo_esperado_pct,
                 c.cor_hex
             FROM ml.dim_cluster c
             LEFT JOIN ml.fct_perfil_cluster p ON c.cluster_id = p.cluster_id
             ORDER BY c.cluster_id
         """)
         for row in cur.fetchall():
-            impacto = (float(row["pct_volume"] or 0) / 100.0) * (float(row["taxa_sla_violado_pct"] or 0) / 100.0)
+            impacto = (float(row["pct_volume"] or 0) / 100.0) * (float(row["taxa_excedeu_tempo_esperado_pct"] or 0) / 100.0)
             clusters.append(PerfilCluster(
                 cluster_id=row["cluster_id"],
                 nome_perfil=row["nome_perfil"],
                 n_incidentes=int(row["n_incidentes"] or 0),
                 pct_volume=float(row["pct_volume"] or 0),
                 duracao_media_horas=float(row["duracao_media_horas"] or 0),
-                taxa_excedeu_tempo_esperado_pct=float(row["taxa_sla_violado_pct"] or 0),
+                taxa_excedeu_tempo_esperado_pct=float(row["taxa_excedeu_tempo_esperado_pct"] or 0),
                 cor_hex=row["cor_hex"],
                 impacto_volume_excedencia_pct=impacto * 100.0,
             ))
