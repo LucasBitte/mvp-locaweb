@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import painel
+from app.api.routers import painel, endpoints
 
 load_dotenv()
 
@@ -20,6 +20,7 @@ app.add_middleware(
 
 # Registrar routers
 app.include_router(painel.router)
+app.include_router(endpoints.router)
 
 
 @app.get("/health")
