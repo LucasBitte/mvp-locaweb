@@ -26,7 +26,7 @@ Implementadas e consolidadas **Fases 1-3** (dados + API) seguindo estrutura sist
 ### Fase 1.1 — Decisão de Schema
 - **Escolha**: Opção (b) — 1 tabela genérica `ml.fct_avaliacao_modelo`
 - **Justificativa**: Menor dívida técnica, 1 ponto de consulta único
-- **Migration 026** criada e aplicada ao banco
+- **Migration 031** criada e aplicada ao banco
 
 | Coluna | Tipo | Descrição |
 |--------|------|-----------|
@@ -73,7 +73,7 @@ Implementadas e consolidadas **Fases 1-3** (dados + API) seguindo estrutura sist
 ---
 
 ### Fase 2.3 — Renomear Coluna
-- **Migration 027** criada: `taxa_sla_violado_pct` → `taxa_excedeu_tempo_esperado_pct`
+- **Migration 032** criada: `taxa_sla_violado_pct` → `taxa_excedeu_tempo_esperado_pct`
 - **Objetivo**: Eliminar ambiguidade semântica (excedência ≠ OLA oficial)
 - **Código atualizado**: `app/api/routers/endpoints.py`
 
@@ -134,8 +134,8 @@ Implementadas e consolidadas **Fases 1-3** (dados + API) seguindo estrutura sist
 ## 🔗 Arquivos Principais
 
 ### Banco de Dados
-- `db/migrations/026_ml_fct_avaliacao_modelo.sql` — Tabela genérica
-- `db/migrations/027_rename_taxa_sla_violado.sql` — Renomear coluna
+- `db/migrations/031_ml_fct_avaliacao_modelo.sql` — Tabela genérica
+- `db/migrations/032_rename_taxa_sla_violado.sql` — Renomear coluna
 
 ### API FastAPI
 - `app/api/main.py` — Entrada (com 2 routers registrados)

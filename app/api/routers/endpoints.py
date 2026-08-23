@@ -352,7 +352,7 @@ def get_alertas(limit: Optional[int] = Query(20, ge=1, le=100)):
 
     try:
         # 1. Alertas ativos
-        # Promovida de ml_dev para ml na Fase 5 (migration 028; regra e dado
+        # Promovida de ml_dev para ml na Fase 5 (migration 033; regra e dado
         # já validados na Fase 4.2 via scripts/create_and_populate_alertas_dev.py).
         alertas_ativos = []
         cur.execute("""

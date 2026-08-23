@@ -1,4 +1,4 @@
--- Migration 028: ml.alertas_ativos
+-- Migration 033: ml.alertas_ativos
 -- Objetivo: tabela referenciada pelo router /api/alertas (Fase 3.2) nunca
 -- existiu em produção nem em nenhum outro schema. Foi criada primeiro em
 -- ml_dev (Fase 4.2, scripts/create_and_populate_alertas_dev.py) para não

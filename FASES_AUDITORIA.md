@@ -4,6 +4,49 @@ Status: Em progresso (branch `dev`)
 Base: `plano-reestruturacao-dashboard-aiops.md` (Parte E)  
 Data: 2026-08-23
 
+## ⚠️ Achado crítico — `dev` divergiu de `main`/PR #30 (2026-08-23)
+
+`dev` e `main` divergiram no mesmo commit (`da44f98`, 22/08 12:22) e seguiram
+**caminhos paralelos e desconectados**. `main` (via `feature/dashboard-completo-fase14-16-e-ux`,
+PR [#30](https://github.com/LucasBitte/mvp-locaweb/pull/30), aberta) já tem:
+
+- As 6 telas do dashboard React **completas e testadas** (`PainelScreen`,
+  `DetalheScreen`, `KpiScreen`, `FatoresScreen`, `ClustersScreen`,
+  `AlertasScreen` — 93 a 251 linhas cada, não esqueletos), com `SourceTag.tsx`
+  (o mesmo padrão de badge de transparência que foi recriado do zero nesta
+  branch como `SourceNote.tsx` — duplicado sem saber que já existia)
+- API com **6 routers separados** (`app/api/routers/{painel,detalhe,fatores,
+  clusters,kpi,alertas}.py`) + **38 testes** (`tests/test_api_*.py`)
+- Deployada em produção (`fiap.looplyai.com.br`, containers Docker)
+- Auditoria própria já rodada em 23/08 08:56 (**antes desta sessão
+  começar**) corrigindo divergências dado×texto em Detalhe/Fatores/Alertas/
+  Clusters — parecido com a Fase 4.2 desta branch, só que mais cedo
+
+**Consequência prática**: praticamente todo o trabalho de API/frontend desta
+branch (`dev`, Fases 3-4) duplicou — pior, sem testes, com bugs de SQL reais
+que a auditoria da Fase 4.2 teve que descobrir e corrigir manualmente —
+código que já existia correto e testado do outro lado.
+
+**Colisão de migrations** (resolvida nesta sessão): `dev` e a PR #30
+numeraram migrations 026-028 com conteúdo **totalmente diferente**, ambas já
+aplicadas ao mesmo banco `fiap` real:
+
+| # | PR #30 (produção) | `dev` (antes da renumeração) |
+|---|---|---|
+| 026 | `ml_fct_pressao_equipe` | `ml_fct_avaliacao_modelo` |
+| 027 | `ml_fct_previsao_produto` | `rename_taxa_sla_violado` |
+| 028 | `dw_fct_recorrencia_operacional` | `ml_alertas_ativos` |
+| 029-030 | `ml_dim_cluster_retexto_*` | (não existiam) |
+
+O banco em si está consistente (tem as duas coisas, tabelas com nomes
+diferentes) — o problema era só nos arquivos. Renumeradas nesta sessão para
+**031/032/033** (livres, depois da 030 da PR #30) — nenhuma tabela/dado foi
+alterado, só os nomes dos arquivos `.sql` e os comentários internos.
+
+**Decisão pendente do usuário**: mergear a PR #30 primeiro, depois decidir o
+que reaproveitar/descartar do restante do trabalho desta branch (Fases 3-5)
+contra a base atualizada.
+
 ## Fases
 
 | Fase | O quê | Status | Data |
@@ -12,11 +55,11 @@ Data: 2026-08-23
 | 1.1 | Decisão: 1 tabela genérica vs. 3 específicas | ✅ COMPLETA (opção b) | 2026-08-23 |
 | 2.1 | Persistência de avaliações em ml_dev.fct_avaliacao_modelo | ✅ COMPLETA (277 registros) | 2026-08-23 |
 | 2.2 | Validação SHAP base_value | ✅ COMPLETA (base_value = -0.7057) | 2026-08-23 |
-| 2.3 | Renomear taxa_sla_violado_pct | ✅ COMPLETA (Migration 027) | 2026-08-23 |
+| 2.3 | Renomear taxa_sla_violado_pct | ✅ COMPLETA (Migration 032) | 2026-08-23 |
 | 3.1 | Modelos Pydantic + router /api/painel | ✅ COMPLETA (com fixes) | 2026-08-23 |
 | 3.2 | Routers /api/detalhe, /fatores, /clusters, /kpi, /alertas | ⚠️ CORRIGIDA na Fase 4.2 (ver nota) | 2026-08-23 |
 | 4.2 | Telas 03 Fatores, 04 Clusters, 05 Alertas (React + recharts) | ✅ COMPLETA | 2026-08-23 |
-| 5 | Promover ml_dev.alertas_ativos/fct_avaliacao_modelo → ml | ✅ COMPLETA (migration 028) | 2026-08-23 |
+| 5 | Promover ml_dev.alertas_ativos/fct_avaliacao_modelo → ml | ✅ COMPLETA (migration 033) | 2026-08-23 |
 | 5 | Rerun K-Means p/ persistir cluster_id por incidente | ❌ BLOQUEADO (ver nota) | 2026-08-23 |
 | 6 | QA técnico (testes de contrato) | ⬜ | — |
 | 7 | QA visual (densidade, nomenclatura) | ⬜ | — |
@@ -33,7 +76,7 @@ Data: 2026-08-23
 
 **Fase 1.1 — Decisão de schema**
 - Escolhida opção (b): 1 tabela genérica `ml.fct_avaliacao_modelo`
-- Migration 026 criada e aplicada ao banco
+- Migration 031 criada e aplicada ao banco
 - Schema consolidado em formato longo (modelo, metrica, valor, dimensao, chave_dimensao)
 - Commit: `a0f5dfd`
 
@@ -116,7 +159,7 @@ Data: 2026-08-23
 - Checklist documentado em `FASE2_RECOMENDACOES.md`
 
 **Fase 2.3 — Renomear taxa_sla_violado_pct**
-- Status: ✅ COMPLETA (Migration 027 aplicada — confirmado direto no banco:
+- Status: ✅ COMPLETA (Migration 032 aplicada — confirmado direto no banco:
   `ml.fct_perfil_cluster` já tem `taxa_excedeu_tempo_esperado_pct`, não a
   coluna antiga). Esta seção estava desatualizada — mesmo tipo de drift
   doc-vs-banco que a própria auditoria original alertava para vigiar.
@@ -130,7 +173,7 @@ Data: 2026-08-23
 
 | Commit | Fase | Conteúdo | Data |
 |--------|------|----------|------|
-| `a0f5dfd` | 1.1 | Migration 026 + schema genérico | 2026-08-23 |
+| `a0f5dfd` | 1.1 | Migration 031 + schema genérico | 2026-08-23 |
 | `065715f` | 2.1 | Persistência 277 registros | 2026-08-23 |
 | `817eb1d` | 2 | Validação SHAP + recomendações | 2026-08-23 |
 | `f029c82` | 3.1 | Modelos Pydantic + /api/painel | 2026-08-23 |

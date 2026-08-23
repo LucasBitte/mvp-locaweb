@@ -1,4 +1,4 @@
--- Migration 026: Tabela genérica para avaliação de modelos
+-- Migration 031: Tabela genérica para avaliação de modelos
 -- Consolidada em formato longo para cobrir 3 casos de uso:
 --   1. Comparação Prophet total vs. baseline (dimensao=null)
 --   2. Backtest por equipe (dimensao='equipe', chave_dimensao='Team14' etc.)

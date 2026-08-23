@@ -1,4 +1,4 @@
--- Migration 027: Renomear taxa_sla_violado_pct → taxa_excedeu_tempo_esperado_pct
+-- Migration 032: Renomear taxa_sla_violado_pct → taxa_excedeu_tempo_esperado_pct
 -- Objetivo: eliminar ambiguidade semântica (excedência de tempo vs. OLA oficial)
 -- Contexto: Achado #2 do plano de auditoria (Parte B, linha 103)
 
@@ -10,4 +10,4 @@ ALTER TABLE ml.fct_perfil_cluster
 COMMENT ON COLUMN ml.fct_perfil_cluster.taxa_excedeu_tempo_esperado_pct IS
     'Taxa de incidentes que excederam o tempo esperado (SLA threshold) por prioridade. '
     'Não é a mesma coisa que "quebra de OLA" oficial (kpi_status_int). '
-    'Renomeada em migration 027 para eliminar ambiguidade semântica.';
+    'Renomeada em migration 032 para eliminar ambiguidade semântica.';
