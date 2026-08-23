@@ -163,6 +163,26 @@ placeholder. Só P2/P3 têm meta. 24 linhas: 2 prioridades × 2 indicadores ×
 Lookup de faixa: `etl/ref_meta_sla.py::faixa_meta_sla()` — regra de negócio
 determinística (não é saída de ML).
 
+### `dw.fct_recorrencia_operacional`
+Análise de recorrência (PLAN.md Fase 5, 2026-08-22) — regra de negócio
+determinística, não saída de ML. Compara os últimos 30 dias contra os 30
+dias anteriores, por 4 granularidades (`produto`, `categoria`,
+`produto_categoria`, `categoria_subcategoria`). Recarregada por completo a
+cada execução (`notebooks/recorrencia.py`), não é append por origem.
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `recorrencia_sk` | text (PK) | `MD5(janela_referencia\|\|granularidade\|\|entidade)` |
+| `janela_referencia` | date | Último dia da janela atual (30d) |
+| `granularidade` | text | `produto` \| `categoria` \| `produto_categoria` \| `categoria_subcategoria` |
+| `entidade` | text | Valor(es), legível (`" \| "` como separador em grãos compostos) |
+| `produto`/`categoria`/`subcategoria` | text (nulo) | Componentes individuais, para filtro |
+| `volume_atual` / `volume_baseline` | integer | Contagem nos últimos 30 dias / nos 30 dias anteriores |
+| `delta_pct` | numeric (nulo) | `NULL` quando `volume_baseline = 0` |
+| `dias_com_incidente_atual` | smallint | 0-30 |
+| `cobertura_dias_atual_pct` | numeric | `dias_com_incidente_atual / 30 * 100` |
+| `status_recorrencia` | text | `recorrente_estavel` / `recorrente_crescente` / `recorrente_em_queda` / `pico_pontual` / `novo_padrao` / `volume_insuficiente` / `sem_padrao_claro` — limiares em `notebooks/recorrencia.py` |
+
 ## Marts de features para ML (schema `ml`)
 
 Populadas por `notebooks/05_ml_feature_marts.ipynb` a partir de
@@ -300,6 +320,35 @@ dim_grupo_sk)`. A soma de `yhat` por `(origem, ds)` entre as 16 equipes
 `fct_previsao_diaria_total` — Grupo A/B usam modelos independentes, não
 splits do total (divergência de dezenas de % é normal; só investigar se
 dobrar ou cair pela metade).
+
+### `ml.fct_pressao_equipe`
+Pressão Operacional Prevista por equipe (PLAN.md Fase 3, 2026-08-22),
+populada por `notebooks/pressao_equipe.py` a partir de
+`ml.fct_previsao_grupo` + média histórica diária da própria equipe
+(calendário completo 2025, zero-fill). **Nunca** é capacidade real,
+headcount ou saturação contratual. Append, idempotente por `origem`
+(DELETE+INSERT), mesmo padrão de `ml.fct_previsao_grupo`.
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `pressao_equipe_sk` | text (PK) | `MD5(origem\|\|ds\|\|dim_grupo_sk)` |
+| `origem` / `h` / `horizonte` / `ds` | date/smallint/text/date | Mesma semântica de `ml.fct_previsao_grupo` |
+| `dim_grupo_sk` | text (FK `dw.dim_grupo`) | |
+| `yhat_previsto` | numeric | = `ml.fct_previsao_grupo.yhat` |
+| `media_historica_diaria` | numeric | Média diária histórica da própria equipe |
+| `pressao_relativa_pct` | numeric | `((yhat_previsto - media_historica_diaria) / media_historica_diaria) * 100` |
+| `nivel_pressao` | text | `normal` (≤10%) / `atencao` (10-30%) / `critico` (>30%) — limiares fixos em `notebooks/pressao_equipe.py` |
+| `metodo_origem` | text | `metodo` de `ml.fct_previsao_grupo` (prophet_individual/prophet_semanal/split_proporcional) — para equipes de Grupo C o % é mais ruidoso por construção (média diária < 1) |
+| `modelo_versao` / `data_execucao` | text/timestamp | |
+
+### `ml.fct_previsao_produto`
+Quebra do forecast total por `produto` via split proporcional histórico
+(PLAN.md Fase 4, 2026-08-22) — mesma técnica de
+`ml.fct_previsao_categoria`, populada por `notebooks/forecast_produto.py`.
+**Não é um Prophet por corte.** Colunas: `previsao_produto_sk` (PK),
+`origem`, `h`, `horizonte`, `ds`, `produto`, `share_historico`,
+`yhat_produto`, `modelo_versao`, `data_execucao`. `UNIQUE(origem, ds,
+produto)`.
 
 ### `ml.dim_cluster`
 Taxonomia curada dos 4 clusters do K-Means (A-D), vinda do mockup
