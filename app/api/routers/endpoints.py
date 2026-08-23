@@ -65,7 +65,7 @@ def get_detalhe(
         previsao_por_categoria = []
 
         cur.execute("""
-            SELECT categoria, SUM(yhat) as yhat
+            SELECT categoria, SUM(yhat_categoria) as yhat
             FROM ml.fct_previsao_categoria
             WHERE ds BETWEEN %s AND %s
             GROUP BY categoria
@@ -83,26 +83,27 @@ def get_detalhe(
         # 2. Recorrências top (sazonalidade, tendência)
         recorrencias_top = []
         cur.execute("""
-            SELECT produto_categoria, tipo, evidencia_pct
+            SELECT categoria, status_recorrencia, delta_pct
             FROM dw.fct_recorrencia_operacional
-            WHERE tipo IN ('tendencia', 'sazonal')
-            ORDER BY evidencia_pct DESC
+            WHERE status_recorrencia IN ('recorrente_crescente', 'recorrente_em_queda', 'pico_pontual')
+            AND categoria IS NOT NULL
+            ORDER BY ABS(delta_pct) DESC
             LIMIT 5
         """)
         for row in cur.fetchall():
             recorrencias_top.append(RecorrenciaOperacional(
-                produto_categoria=row["produto_categoria"],
-                tipo=row["tipo"],
-                evidencia=float(row["evidencia_pct"] or 0),
+                produto_categoria=row["categoria"],
+                tipo=row["status_recorrencia"],
+                evidencia=float(row["delta_pct"] or 0),
             ))
 
         # 3. Série histórica (14 dias)
         historico_serie = []
         cur.execute("""
-            SELECT ds, y, NULL::float as yhat, NULL::float as yhat_lower, NULL::float as yhat_upper
+            SELECT data_abertura as ds, total_chamados as y
             FROM ml.ml_forecast_dataset
-            WHERE ds >= %s
-            ORDER BY ds DESC
+            WHERE data_abertura >= %s
+            ORDER BY data_abertura DESC
             LIMIT 14
         """, (hoje - timedelta(days=14),))
         for row in cur.fetchall():
@@ -130,47 +131,45 @@ def get_detalhe(
 # ============================================================================
 
 @router.get("/fatores", response_model=FatoresResponse)
-def get_fatores(incidente_id: Optional[int] = Query(None)):
+def get_fatores(incidente_id: Optional[str] = Query(None)):
     """Risco & explicabilidade — ranking + SHAP + qualidade"""
 
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
     try:
-        # 1. Ranking de risco
+        # 1. Ranking de risco (JOIN até dw.fct_incidentes p/ prioridade+categoria reais)
         ranking_incidentes = []
         cur.execute("""
-            SELECT incidente_id, prioridade_num, categoria, score_calibrado
-            FROM ml.fct_risco_incidente
-            ORDER BY score_calibrado DESC
+            SELECT
+                r.incident_id,
+                dp.prioridade_num,
+                dc.categoria,
+                r.score_calibrado,
+                r.motivo_principal
+            FROM ml.fct_risco_incidente r
+            JOIN dw.fct_incidentes fi ON fi.incident_id = r.incident_id
+            JOIN dw.dim_prioridade dp ON dp.dim_prioridade_sk = fi.dim_prioridade_sk
+            JOIN dw.dim_produto_categoria dc ON dc.dim_produto_categoria_sk = fi.dim_produto_categoria_sk
+            ORDER BY r.score_calibrado DESC
             LIMIT 30
         """)
         for row in cur.fetchall():
             ranking_incidentes.append(IncidenteRisco(
-                incidente_id=row["incidente_id"],
+                incidente_id=row["incident_id"],
                 prioridade=f"P{row['prioridade_num']}",
                 categoria=row["categoria"],
                 score_calibrado=float(row["score_calibrado"] or 0),
-                top_fator="prioridade",  # TODO: from fct_shap_incidente
+                top_fator=row["motivo_principal"] or "não informado",
             ))
 
         # 2. SHAP se incidente_id fornecido
+        # NOTA: base_value/saida_bruta_xgboost (saída bruta pré-calibração) ainda não
+        # existem em nenhuma tabela de produção nem em ml_dev (Fase 2.2 bloqueada —
+        # ver FASE2_RECOMENDACOES.md). Sem base_value não dá pra montar um waterfall
+        # matematicamente válido, então shap_decomposicao fica None até essa
+        # investigação no notebook XGBoost ser concluída.
         shap_decomposicao = None
-        if incidente_id:
-            cur.execute("""
-                SELECT base_value, shap_value, saida_bruta_xgboost, score_calibrado
-                FROM ml.fct_shap_incidente
-                WHERE incidente_id = %s
-                LIMIT 1
-            """, (incidente_id,))
-            shap_row = cur.fetchone()
-            if shap_row:
-                shap_decomposicao = ShapDecomposicao(
-                    base_value=float(shap_row["base_value"] or 0),
-                    shap_values={"feature1": 0.05},  # TODO: desagregar
-                    saida_bruta_xgboost=float(shap_row["saida_bruta_xgboost"] or 0),
-                    score_calibrado=float(shap_row["score_calibrado"] or 0),
-                )
 
         # 3. Importância global
         importancia_global = {}
@@ -250,23 +249,38 @@ def get_clusters():
                 impacto_volume_excedencia_pct=impacto * 100.0,
             ))
 
-        # 2. Diagnóstico k
+        # 2. Diagnóstico k — ml_dev.fct_avaliacao_modelo é formato longo
+        # (modelo, dimensao, chave_dimensao, metrica, valor), não tem colunas
+        # k/silhouette/davies_bouldin dedicadas — precisa pivotar em Python.
+        # pca_variancia não é persistida (não depende de k, é do PCA global) —
+        # segue como constante documentada, sinalizada no frontend.
         diagnostico_kmeans = []
         cur.execute("""
-            SELECT k, silhouette, davies_bouldin, pca_variancia
+            SELECT chave_dimensao, metrica, valor
             FROM ml_dev.fct_avaliacao_modelo
             WHERE modelo = 'kmeans' AND dimensao = 'k'
-            ORDER BY k
+            ORDER BY chave_dimensao
         """)
+        por_k: dict = {}
         for row in cur.fetchall():
+            k = int(float(row["chave_dimensao"]))
+            por_k.setdefault(k, {})[row["metrica"]] = float(row["valor"] or 0)
+        for k in sorted(por_k):
             diagnostico_kmeans.append(DiagnosticoKmeans(
-                k=int(row["k"]),
-                silhouette=float(row["silhouette"] or 0),
-                davies_bouldin=float(row["davies_bouldin"] or 0),
-                pca_variancia=39.95,  # TODO: from tabela
+                k=k,
+                silhouette=por_k[k].get("silhouette", 0.0),
+                davies_bouldin=por_k[k].get("davies_bouldin", 0.0),
+                pca_variancia=39.95,  # constante documentada — ver docs/eda-consolidada.md
             ))
 
-        # 3. Composição (TODO)
+        # 3. Composição por prioridade/categoria — TENTADO via ml.ml_cluster_dataset
+        # (cluster_id + prioridade_num + categoria por incidente), mas essa tabela
+        # tem cluster_id 100% NULL: o rótulo de cluster por incidente nunca foi
+        # persistido em lugar nenhum (só o perfil agregado existe, em
+        # ml.fct_perfil_cluster). Preencher isso exigiria re-rodar o notebook
+        # K-Means para gravar o assignment por incidente — retreino de modelo em
+        # produção requer aprovação explícita (CLAUDE.md §8), não é decisão de
+        # uma correção de query. Fica sem fonte até essa decisão ser tomada.
         composicao_por_prioridade = {}
         composicao_por_categoria = {}
 
@@ -337,11 +351,16 @@ def get_alertas(limit: Optional[int] = Query(20, ge=1, le=100)):
 
     try:
         # 1. Alertas ativos
+        # NOTA: ml.alertas_ativos nunca existiu em produção. Servindo de
+        # ml_dev.alertas_ativos (populado por scripts/create_and_populate_alertas_dev.py)
+        # até uma decisão de promover para `ml` na Fase 5.
         alertas_ativos = []
         cur.execute("""
-            SELECT id, severidade, condicao, cluster_id, origem
-            FROM ml.alertas_ativos
-            ORDER BY severidade DESC
+            SELECT id, severidade, condicao, cluster_id, equipe_id, origem
+            FROM ml_dev.alertas_ativos
+            ORDER BY CASE severidade
+                WHEN 'crítica' THEN 4 WHEN 'alta' THEN 3
+                WHEN 'média' THEN 2 ELSE 1 END DESC
             LIMIT %s
         """, (limit,))
         for row in cur.fetchall():
@@ -350,7 +369,7 @@ def get_alertas(limit: Optional[int] = Query(20, ge=1, le=100)):
                 severidade=row["severidade"],
                 condicao=row["condicao"],
                 cluster_id=row.get("cluster_id"),
-                equipe_id=None,
+                equipe_id=row.get("equipe_id"),
                 origem=row["origem"],
                 timestamp=datetime.now(),
             ))

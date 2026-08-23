@@ -107,7 +107,7 @@ class QualidadeModelo(BaseModel):
 
 class IncidenteRisco(BaseModel):
     """Item no ranking de risco"""
-    incidente_id: int
+    incidente_id: str
     prioridade: str
     categoria: str
     score_calibrado: float
@@ -117,7 +117,7 @@ class IncidenteRisco(BaseModel):
 class FatoresResponse(BaseModel):
     """Resposta de /api/fatores — risco & explicabilidade"""
     ranking_incidentes: List[IncidenteRisco] = Field(..., description="Top N incidentes por risco")
-    incidente_selecionado: Optional[int] = Field(None, description="ID do incidente se param fornecido")
+    incidente_selecionado: Optional[str] = Field(None, description="ID do incidente se param fornecido")
     shap_decomposicao: Optional[ShapDecomposicao] = Field(None, description="Se incidente_id fornecido")
     importancia_global: Dict[str, float] = Field(..., description="{conceito: importancia_pct}")
     qualidade_modelo: QualidadeModelo

@@ -65,20 +65,22 @@ def get_painel(data_base: Optional[str] = Query(None, description="YYYY-MM-DD (d
         # 1. Total de chamados hoje
         cur.execute("""
             SELECT COUNT(*) as total
-            FROM dw.fct_incidentes
-            WHERE DATE(aberto_at) = DATE(%s)
-            AND prioridade_num IN (2, 3)
+            FROM dw.fct_incidentes fi
+            JOIN dw.dim_prioridade dp ON dp.dim_prioridade_sk = fi.dim_prioridade_sk
+            WHERE DATE(fi.aberto_at) = DATE(%s)
+            AND dp.prioridade_num IN (2, 3)
         """, (data_execucao,))
         total_chamados = cur.fetchone()["total"] or 0
 
         # 2. KPI status agregado (P2+P3)
         cur.execute("""
             SELECT
-                ROUND(100.0 * SUM(CASE WHEN kpi_status_int > 0 THEN 1 ELSE 0 END)
+                ROUND(100.0 * SUM(CASE WHEN fi.kpi_status_int > 0 THEN 1 ELSE 0 END)
                     / NULLIF(COUNT(*), 0)::numeric, 2) as pct_cumprido
-            FROM dw.fct_incidentes
-            WHERE prioridade_num IN (2, 3)
-            AND kpi_status_int IS NOT NULL
+            FROM dw.fct_incidentes fi
+            JOIN dw.dim_prioridade dp ON dp.dim_prioridade_sk = fi.dim_prioridade_sk
+            WHERE dp.prioridade_num IN (2, 3)
+            AND fi.kpi_status_int IS NOT NULL
         """)
         row = cur.fetchone()
         kpi_status_agregado = float(row["pct_cumprido"] or 0)
@@ -86,7 +88,7 @@ def get_painel(data_base: Optional[str] = Query(None, description="YYYY-MM-DD (d
         # 3. Previsão D+1 (Prophet total)
         amanha = (data_execucao + timedelta(days=1)).date()
         cur.execute("""
-            SELECT ds, yhat, yhat_lower, yhat_upper, y
+            SELECT ds, yhat, yhat_lower, yhat_upper
             FROM ml.fct_previsao_diaria_total
             WHERE ds = %s
             ORDER BY ds DESC
@@ -97,7 +99,7 @@ def get_painel(data_base: Optional[str] = Query(None, description="YYYY-MM-DD (d
         if pred_row:
             previsao_d1 = PrevisaoPonto(
                 ds=pred_row["ds"],
-                y=float(pred_row["y"] or 0),
+                y=0.0,  # D+1 ainda não aconteceu — sem valor observado
                 yhat=float(pred_row["yhat"] or 0),
                 yhat_lower=float(pred_row["yhat_lower"]) if pred_row["yhat_lower"] else None,
                 yhat_upper=float(pred_row["yhat_upper"]) if pred_row["yhat_upper"] else None,
@@ -124,10 +126,11 @@ def get_painel(data_base: Optional[str] = Query(None, description="YYYY-MM-DD (d
         # 5. Pressão por equipe (D+1)
         cur.execute("""
             SELECT
-                fg.grupo_id,
+                dg.grupo_designado AS grupo_id,
                 fg.pressao_relativa_pct,
                 fg.metodo_origem
             FROM ml.fct_pressao_equipe fg
+            JOIN dw.dim_grupo dg ON dg.dim_grupo_sk = fg.dim_grupo_sk
             WHERE fg.ds = %s
             ORDER BY fg.pressao_relativa_pct DESC
         """, (amanha,))
@@ -146,7 +149,7 @@ def get_painel(data_base: Optional[str] = Query(None, description="YYYY-MM-DD (d
 
         # 7. Categoria top (volume previsto)
         cur.execute("""
-            SELECT categoria, MAX(yhat) as max_prev
+            SELECT categoria, MAX(yhat_categoria) as max_prev
             FROM ml.fct_previsao_categoria
             WHERE ds = %s
             GROUP BY categoria
@@ -159,7 +162,7 @@ def get_painel(data_base: Optional[str] = Query(None, description="YYYY-MM-DD (d
         # 8. Risco principal (cluster)
         cur.execute("""
             SELECT cluster_id FROM ml.fct_perfil_cluster
-            ORDER BY taxa_sla_violado_pct DESC
+            ORDER BY taxa_excedeu_tempo_esperado_pct DESC
             LIMIT 1
         """)
         risco_row = cur.fetchone()
