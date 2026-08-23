@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 import warnings
 from pathlib import Path
@@ -72,6 +73,22 @@ MODELO_VERSAO_GRUPO = "forecast_equipe_v1"
 GRUPO_A = ["Team14", "Team11", "Team05", "Team09"]
 GRUPO_B = ["Team12", "Team03", "Team17", "Team02"]
 GRUPO_C = ["Team10", "Team16", "Team01", "Team15", "Team07", "Team08", "Team04", "Team06"]
+
+# Saida: artefatos do modelo em data/ml/forecast_equipe (mesmo padrao dos outros 3 modelos).
+OUT_DIR = Path(os.getenv("ML_OUTPUT_DIR", PROJECT_ROOT / "data" / "ml" / "forecast_equipe"))
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def salvar_csv(df: pd.DataFrame, nome: str) -> Path:
+    """Grava um artefato em OUT_DIR (data/ml/forecast_equipe) como csv."""
+    saida = df.copy()
+    for c in saida.columns:
+        if str(saida[c].dtype) == "category" or saida[c].dtype == object:
+            saida[c] = saida[c].astype("string")   # 'string' preserva nulos; str() nao
+    caminho_out = OUT_DIR / f"{nome}.csv"
+    saida.to_csv(caminho_out, index=False)
+    print(f"   -> {caminho_out}  ({len(saida):,} linhas)")
+    return caminho_out
 
 # Detector de "storm day": um pai (incidente_pai != 'Independente') respondendo por >=40%
 # do volume do dia da equipe, com o dia >=2x a mediana diaria historica da propria equipe.
@@ -370,6 +387,7 @@ def main(argv: list[str] | None = None):
     # ---------------- Grupo A ----------------
     print(f"\n{'='*88}\nGRUPO A — Prophet individual\n{'='*88}")
     linhas_a = []
+    metricas_por_equipe = []
     for equipe in GRUPO_A:
         r = rodar_diario(engine, equipe, n_pai_min=STORM_N_PAI_MIN_GRUPO_A)
         resultados[equipe] = r
@@ -385,6 +403,12 @@ def main(argv: list[str] | None = None):
         f["metodo"] = "prophet_individual"
         linhas_a.append(f[["origem", "h", "horizonte", "ds", "grupo_designado", "yhat",
                             "yhat_lower", "yhat_upper", "metodo"]])
+        metricas_por_equipe.append(
+            r["metricas"].reset_index().assign(
+                equipe=equipe, grupo="A", veredito=r["veredito"],
+                veredito_detalhe=r["veredito_detalhe"], metodo_producao="prophet_individual",
+            )
+        )
 
     # ---------------- Grupo B ----------------
     print(f"\n{'='*88}\nGRUPO B — diario primeiro, semanal so se PERDE PARA\n{'='*88}")
@@ -408,6 +432,12 @@ def main(argv: list[str] | None = None):
         f["metodo"] = metodo
         linhas_b.append(f[["origem", "h", "horizonte", "ds", "grupo_designado", "yhat",
                             "yhat_lower", "yhat_upper", "metodo"]])
+        metricas_por_equipe.append(
+            r["metricas"].reset_index().assign(
+                equipe=equipe, grupo="B", veredito=r["veredito"],
+                veredito_detalhe=r["veredito_detalhe"], metodo_producao=metodo,
+            )
+        )
 
     # ---------------- Grupo C ----------------
     print(f"\n{'='*88}\nGRUPO C — split proporcional do total\n{'='*88}")
@@ -436,6 +466,10 @@ def main(argv: list[str] | None = None):
         raise RuntimeError(f"grupo_designado sem dim_grupo_sk em dw.dim_grupo: {faltando}")
 
     persistir_previsao_grupo(engine, todas)
+
+    # ---------------- metricas de backtest por equipe (Grupo A/B) ----------------
+    metricas_equipe = pd.concat(metricas_por_equipe, ignore_index=True)
+    salvar_csv(metricas_equipe, "metricas_backtest_equipe")
 
     # ---------------- validacao: soma por equipe vs total ----------------
     print(f"\n{'='*88}\nCHECAGEM — soma das equipes vs. ml.fct_previsao_diaria_total\n{'='*88}")

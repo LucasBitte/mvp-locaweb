@@ -594,8 +594,17 @@ guias de referência não específicos deste projeto).
 - **ML-1 (Prophet)**: diagnóstico de resíduos e documentação de
   hiperparâmetros — já feito (A.2); qualquer alteração futura de modelo
   passa por checkpoint antes de retreinar.
-- **ML-2 (K-Means)**: antes de afirmar "k=4 é a melhor segmentação", rodar o
-  diagnóstico comparativo `k=2..8` (Fase 10/13).
+- **ML-2 (K-Means)** ✅ fechado (2026-08-22): diagnóstico comparativo
+  `k=2..8` rodado (Fase 10/13, `notebooks/diagnostico_kmeans_k.py`,
+  read-only). Resultado: silhouette maximizado em `k=2` (0,3814),
+  Davies-Bouldin minimizado em `k=8` (0,8961), sem cotovelo nítido na
+  inertia — `k=4` (produção) fica em posição intermediária, não é o
+  melhor nem o pior em nenhuma das 3 métricas. **Decisão**: manter `k=4`
+  por justificativa de negócio (4 perfis interpretáveis já em produção,
+  taxonomia curada em `ml.dim_cluster`), não por vencer as métricas —
+  decisão defensável, não "provada" estatisticamente. Nenhuma tabela do
+  banco alterada, nenhum retreino. Ver `docs/metricas-validacao.md` §3 e
+  `docs/guia-modelo-kmeans-clusters.md` (gráfico do cotovelo).
 - **ML-3 (Reprodutibilidade)**: avaliar pin de dependências antes do PR
   final de qualquer etapa futura; alterar `requirements*.txt` só após
   aprovação humana explícita.

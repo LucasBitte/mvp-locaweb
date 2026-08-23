@@ -4,8 +4,8 @@
 > os gráficos de `notebooks/forecast_equipe_graficos.py` (script novo, não
 > faz parte do pipeline de produção — lê `ml.fct_previsao_grupo`/
 > `ml.fct_pressao_equipe` direto do banco `fiap`, só `SELECT`, e plota) —
-> explica cada gráfico, a arquitetura híbrida, e é honesto sobre uma
-> lacuna real de métricas neste modelo específico. Fecha com um glossário.
+> explica cada gráfico, a arquitetura híbrida, e como a lacuna de métricas
+> por equipe (histórica neste modelo específico) foi fechada. Fecha com um glossário.
 > Fonte de verdade: `docs/forecast-por-equipe.md` (arquitetura completa).
 
 ## 1. O que este modelo faz
@@ -86,39 +86,53 @@ equipe (não volume absoluto) — verde/âmbar/vermelho conforme o nível.
   arquitetura híbrida — equipes pequenas não têm uma previsão "sua", têm
   uma fatia proporcional da previsão do total.
 
-## 4. As métricas — e uma lacuna real que precisa ficar registrada
+## 4. As métricas — lacuna fechada em código (2026-08-23)
 
-Diferente dos outros 3 modelos deste projeto (Prophet total, XGBoost,
-K-Means), **`forecast_equipe.py` não persiste nenhuma métrica de acurácia
-por equipe em parquet ou tabela do banco** — o backtest roda, o veredito
-("SUPERA"/"EMPATA"/"PERDE PARA" o melhor baseline) é calculado, mas só
-aparece no `print()` da execução, sem gravação. Os únicos números
-versionados vêm de `docs/forecast-por-equipe.md` §4 (copiados manualmente
-do stdout de uma execução):
+Até 2026-08-22, `forecast_equipe.py` não persistia nenhuma métrica de
+acurácia por equipe — o backtest rodava, o veredito
+("SUPERA"/"EMPATA"/"PERDE PARA" o melhor baseline) era calculado, mas só
+aparecia no `print()` da execução, sem gravação. Isso foi corrigido: o
+script agora grava `data/ml/forecast_equipe/metricas_backtest_equipe.csv`
+a cada execução (mesmo padrão `OUT_DIR`/`salvar_csv()` já usado nos
+outros 3 modelos) — uma linha por combinação equipe × modelo testado no
+backtest (`prophet_regime` + baselines), com colunas `equipe`, `grupo`
+(A/B), `veredito`, `veredito_detalhe` e `metodo_producao` (o método que
+efetivamente rodou: `prophet_individual` ou `prophet_semanal`) somadas às
+métricas já existentes (`MAE`, `RMSE`, `WAPE%`, `vies`, `MASE`,
+`cobertura%`, `amplitude`). `notebooks/forecast_equipe_graficos.py`
+ganhou a Figura 3 (MAE e WAPE por equipe, Grupo A/B), lendo esse CSV.
 
-| Equipe | MAE (Prophet) | WAPE% | Veredito vs. melhor baseline |
-|---|---|---|---|
-| Team14 | 16,89 | 32,6% | Empata (+0,6%) |
-| Team11 | 5,72 | 29,1% | Empata (-1,2%) |
-| Team05 | 11,11 | 62,8% | Empata (-4,2%) |
-| Team09 | 2,83 | 42,3% | Supera (-5,7%) |
+**Números reais** (execução de 2026-08-23, origem=2025-12-31, lidos de
+`metricas_backtest_equipe.csv`, filtrando `modelo == 'prophet_regime'` —
+a linha do modelo diário, o mesmo que decide o veredito de cada equipe;
+o CSV completo tem 56 linhas, 8 equipes × 7 modelos testados no backtest):
 
-**Leitura honesta**: nenhuma das 4 equipes do Grupo A supera o melhor
-baseline por margem folgada (só Team09 supera, por 5,7 pontos) — as
-outras 3 empatam. Isso é esperado (volume por equipe é mais ruidoso que o
-total agregado, ver o guia do Prophet total) e não invalida o modelo: o
-Prophet ganha em cobertura de intervalo (76-92%, varia por equipe) e é a
-única técnica que produz `yhat_lower`/`yhat_upper` — os baselines de
-comparação não produzem intervalo algum.
+| Equipe | Grupo | MAE (Prophet) | WAPE% | Veredito vs. melhor baseline | Método em produção |
+|---|---|---|---|---|---|
+| Team14 | A | 16,89 | 32,6% | Empata | prophet_individual |
+| Team11 | A | 5,72 | 29,1% | Empata | prophet_individual |
+| Team05 | A | 11,11 | 62,8% | Empata | prophet_individual |
+| Team09 | A | 2,83 | 42,3% | Supera | prophet_individual |
+| Team12 | B | 1,67 | 93,9% | Supera | prophet_individual |
+| Team03 | B | 1,59 | 72,6% | **Perde para** | **prophet_semanal** (fallback) |
+| Team17 | B | 1,51 | 77,0% | Supera | prophet_individual |
+| Team02 | B | 1,29 | 98,5% | Empata | prophet_individual |
 
-**Por que isso é registrado aqui como lacuna, não preenchido com número
-aproximado**: seguindo o mesmo princípio já aplicado no resto deste
-projeto (nunca fabricar dado) — recalcular o backtest por equipe para
-gerar um parquet reproduzível exigiria re-treinar Prophet 16 vezes (ou
-mais, por semente), o que está fora do escopo de "ler o que já existe e
-plotar". Fica registrado como uma melhoria futura possível: persistir
-`metricas_backtest_equipe.parquet` em `forecast_equipe.py`, no mesmo
-padrão que `forecast_incidentes_revisado.py` já usa para o total.
+**Leitura honesta**: no Grupo A, nenhuma das 4 equipes supera o melhor
+baseline por margem folgada (só Team09 supera) — as outras 3 empatam.
+Isso é esperado (volume por equipe é mais ruidoso que o total agregado,
+ver o guia do Prophet total) e não invalida o modelo: o Prophet ganha em
+cobertura de intervalo (76-92%, varia por equipe) e é a única técnica que
+produz `yhat_lower`/`yhat_upper` — os baselines de comparação não
+produzem intervalo algum. No Grupo B, o WAPE% salta para 70-98% (contra
+30-63% no Grupo A) — esperado, volume médio abaixo de 5/dia deixa o erro
+percentual muito mais sensível a dias com poucos incidentes. **Nota sobre
+Team03**: a linha da tabela é o backtest do modelo *diário*
+(`prophet_regime`) — é justamente esse resultado (`PERDE PARA` o
+baseline `ma28`) que aciona o fallback para `prophet_semanal`, o método
+que de fato roda em produção para essa equipe; o CSV não tem uma linha
+de métrica equivalente para o semanal (`rodar_semanal()` não passa pelo
+mesmo backtest de `metricas_gerais()`).
 
 ## 5. Glossário
 

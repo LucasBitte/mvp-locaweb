@@ -128,8 +128,8 @@ def main() -> None:
 
     out_dir = PROJECT_ROOT / "data" / "ml" / "kmeans"
     out_dir.mkdir(parents=True, exist_ok=True)
-    caminho = out_dir / "diagnostico_k_2_a_8.parquet"
-    resultado.to_parquet(caminho, index=False)
+    caminho = out_dir / "diagnostico_k_2_a_8.csv"
+    resultado.to_csv(caminho, index=False)
     print(f"\nRelatorio salvo em {caminho} — NENHUMA tabela do banco (ml.dim_cluster/"
           f"ml.fct_perfil_cluster) foi alterada. Decisao de retreinar e checkpoint humano.")
 

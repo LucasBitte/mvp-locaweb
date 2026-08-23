@@ -164,11 +164,41 @@ fig2.savefig(_PLOT_DIR / 'figura2_pressao_curvas.png', dpi=110, bbox_inches='tig
 plt.close(fig2)
 print('Figura 2 salva.')
 
+# =============================================================================
+# FIGURA 3 -- Metricas de backtest por equipe (Grupo A/B), a partir do CSV
+# persistido por forecast_equipe.py (metricas_backtest_equipe.csv). So le e
+# plota o modelo que efetivamente roda em producao por equipe (prophet_regime
+# para quem ficou diario, a comparacao completa contra baselines fica no CSV
+# para quem quiser conferir -- aqui so o resumo de producao).
+# =============================================================================
+metricas_equipe = pd.read_csv(_OUT_DIR / 'metricas_backtest_equipe.csv')
+producao = metricas_equipe[metricas_equipe['modelo'] == 'prophet_regime'].sort_values('MAE')
+
+COR_GRUPO = {'A': '#1E6FD9', 'B': '#7A8498'}
+
+fig3, ax3 = plt.subplots(1, 2, figsize=(14, 5.5))
+
+cores_grupo = [COR_GRUPO[g] for g in producao.grupo]
+ax3[0].barh(producao.equipe, producao.MAE, color=cores_grupo)
+ax3[0].set_xlabel('MAE (incidentes/dia, backtest de avaliação final)')
+ax3[0].set_title('MAE por equipe -- modelo diário (prophet_regime)\nGrupo A vs. Grupo B')
+
+ax3[1].barh(producao.equipe, producao['WAPE%'], color=cores_grupo)
+ax3[1].set_xlabel('WAPE (%)')
+ax3[1].set_title('WAPE por equipe -- modelo diário (prophet_regime)')
+
+handles3 = [plt.Rectangle((0, 0), 1, 1, color=COR_GRUPO[g]) for g in COR_GRUPO]
+ax3[0].legend(handles3, [f'Grupo {g}' for g in COR_GRUPO], fontsize=8, loc='lower right')
+
+fig3.suptitle('Figura 3 -- Backtest por equipe: MAE e WAPE do modelo diário (Grupo A/B)', fontsize=12, y=1.03)
+fig3.tight_layout()
+fig3.savefig(_PLOT_DIR / 'figura3_metricas_backtest_equipe.png', dpi=110, bbox_inches='tight')
+plt.close(fig3)
+print('Figura 3 salva.')
+
 print()
-print('Nota sobre métricas: forecast_equipe.py NÃO persiste backtest/MAE por')
-print('equipe em nenhuma tabela (só imprime no stdout da execução) -- os únicos')
-print('números de acurácia versionados para este modelo estão na tabela de')
-print('docs/forecast-por-equipe.md §4, copiados manualmente do print de cada')
-print('run. Diferente de Prophet total/XGBoost/K-Means, este modelo não tem um')
-print('artefato read-only reproduzível de acurácia por equipe hoje -- reportado')
-print('como uma lacuna real, não preenchido com número aproximado.')
+print('Nota sobre métricas: agora persistidas em')
+print(f'{_OUT_DIR / "metricas_backtest_equipe.csv"} (uma linha por equipe x modelo')
+print('testado no backtest -- prophet_regime + baselines), gravado por')
+print('forecast_equipe.py a cada execução. Fecha a lacuna antes reportada aqui')
+print('(só stdout) e na tabela copiada manualmente de docs/forecast-por-equipe.md §4.')

@@ -3,13 +3,13 @@ educacional, não faz parte do pipeline de produção.
 
 `notebooks/forecast_incidentes_revisado.py` deliberadamente não gera
 imagem (comentário no próprio script: "cada painel do antigo gráfico vira
-um parquet... quem quiser o gráfico plota a partir daqui"). Este script lê
-só os parquets já persistidos em `data/ml/prophet/` (execução real) e
+um csv... quem quiser o gráfico plota a partir daqui"). Este script lê
+só os csvs já persistidos em `data/ml/prophet/` (execução real) e
 plota — não re-treina Prophet, não roda backtest, não escreve em
 `ml.fct_previsao_*` nem em nenhuma tabela do banco `fiap`.
 
 Rodar depois de `python notebooks/forecast_incidentes_revisado.py --fonte sql`
-(precisa que os parquets já existam):
+(precisa que os csvs já existam):
 
     ./venv/bin/python3 notebooks/forecast_incidentes_graficos.py
 
@@ -45,12 +45,14 @@ COR_MODELOS = {
     'naive_ultimo': '#101C2E',
 }
 
-serie = pd.read_parquet(_OUT_DIR / 'serie_diaria.parquet')
-backtest = pd.read_parquet(_OUT_DIR / 'backtest_bruto.parquet')
-metricas = pd.read_parquet(_OUT_DIR / 'metricas_avaliacao_final.parquet')
-por_horizonte = pd.read_parquet(_OUT_DIR / 'diagnostico_por_horizonte.parquet')
-acf = pd.read_parquet(_OUT_DIR / 'acf_residuos.parquet')
-forecast_futuro = pd.read_parquet(_OUT_DIR / 'forecast_d1_d7.parquet')
+# parse_dates explicito nas colunas de data -- csv nao preserva tipo como o
+# parquet preservava; sem isso 'ds'/'origem' viram string e .dt/.date() quebram.
+serie = pd.read_csv(_OUT_DIR / 'serie_diaria.csv', parse_dates=['ds'])
+backtest = pd.read_csv(_OUT_DIR / 'backtest_bruto.csv', parse_dates=['origem', 'ds'])
+metricas = pd.read_csv(_OUT_DIR / 'metricas_avaliacao_final.csv')
+por_horizonte = pd.read_csv(_OUT_DIR / 'diagnostico_por_horizonte.csv')
+acf = pd.read_csv(_OUT_DIR / 'acf_residuos.csv')
+forecast_futuro = pd.read_csv(_OUT_DIR / 'forecast_d1_d7.csv', parse_dates=['origem', 'ds'])
 
 # =============================================================================
 # FIGURA 1 -- Real vs. previsto e comparacao de modelos
@@ -58,7 +60,7 @@ forecast_futuro = pd.read_parquet(_OUT_DIR / 'forecast_d1_d7.parquet')
 fig1, ax1 = plt.subplots(1, 2, figsize=(15, 5.5))
 
 # 1. Real vs. previsto ao longo do tempo (h=1, periodo de avaliacao final --
-# o mesmo periodo que gera os numeros de metricas_avaliacao_final.parquet,
+# o mesmo periodo que gera os numeros de metricas_avaliacao_final.csv,
 # nao o de tuning). Mostra o modelo de producao com faixa de intervalo.
 bt_h1 = backtest[(backtest.modelo == MODELO_PRODUCAO) & (backtest.h == 1) & (backtest.periodo == 'avaliacao_final')].sort_values('ds')
 ax1[0].fill_between(bt_h1.ds, bt_h1.lo, bt_h1.hi, alpha=0.2, color=COR_MODELOS[MODELO_PRODUCAO], label='intervalo previsto')
@@ -139,7 +141,7 @@ fig3, ax3 = plt.subplots(1, 2, figsize=(14, 5.5))
 # 5. Serie historica completa com a(s) quebra(s) de patamar detectada(s) --
 # recalculo LEVE (mediana movel de 28 dias, razao m/m.shift(28), quebra se
 # razao>2 ou <0.5 -- mesma logica de validar_serie() no script de producao,
-# celula nao re-treina Prophet, só lê serie_diaria.parquet já persistido).
+# celula nao re-treina Prophet, só lê serie_diaria.csv já persistido).
 serie_ord = serie.sort_values('ds').reset_index(drop=True)
 m28 = serie_ord.y.rolling(28).median()
 razao = m28 / m28.shift(28)
@@ -155,6 +157,29 @@ ax3[0].set_ylabel('Incidentes/dia')
 ax3[0].set_title(f'Série histórica 2025 -- {len(quebras)} quebra(s) de patamar detectada(s)\n(razão mediana 28d atual/anterior > 2x ou < 0,5x)')
 ax3[0].legend(fontsize=8)
 ax3[0].tick_params(axis='x', rotation=30)
+
+# ---- Investigacao: o limiar do detector (>2x ou <0,5x) e atingivel nesta
+# escala de serie, ou esta calibrado de um jeito que estruturalmente nunca
+# dispara aqui? So leitura/print -- nao altera validar_serie() nem o
+# pipeline de producao (forecast_incidentes_revisado.py).
+razao_valida = razao.dropna()
+dist_do_limiar_sup = (2.0 - razao_valida[razao_valida <= 2.0]).min() if (razao_valida <= 2.0).any() else float('nan')
+dist_do_limiar_inf = (razao_valida[razao_valida >= 0.5] - 0.5).min() if (razao_valida >= 0.5).any() else float('nan')
+print('Investigacao do limiar do detector de quebra de patamar (razao mediana 28d atual/anterior):')
+print(f'  Range observado na serie agregada 2025: min={razao_valida.min():.3f}  max={razao_valida.max():.3f}')
+print(f'  Limiares do detector: >2,000 (quebra pra cima) ou <0,500 (quebra pra baixo)')
+print(f'  Maior valor chegou a {razao_valida.max():.3f} -- faltaram {dist_do_limiar_sup:.3f} pontos pra disparar o limiar superior')
+print(f'  Menor valor chegou a {razao_valida.min():.3f} -- faltaram {dist_do_limiar_inf:.3f} pontos pra disparar o limiar inferior')
+pct_acima_1_5 = 100 * (razao_valida > 1.5).mean()
+pct_abaixo_0_67 = 100 * (razao_valida < 1 / 1.5).mean()
+print(f'  {pct_acima_1_5:.1f}% dos dias tiveram razao >1,5x (mais perto do limiar sup.) | '
+      f'{pct_abaixo_0_67:.1f}% tiveram razao <0,67x (mais perto do limiar inf.)')
+print('  Leitura: a serie AGREGADA (todos os incidentes) e estavel o bastante para nunca')
+print('  chegar perto dos limiares -- diferente de series POR EQUIPE (volume bem menor,')
+print('  mais ruidosas), onde o mesmo detector ja causou um bug real (Team11, ver CLAUDE.md')
+print('  secao 10). O limiar nao parece mal calibrado em si; ele so e estruturalmente mais')
+print('  dificil de disparar numa serie agregada de ~100+ incidentes/dia do que numa serie')
+print('  de equipe com menos de 1 incidente/dia, onde ruido isolado ja produz razoes extremas.')
 
 # 6. Previsao futura D+1..D+7 com intervalo (fan chart) -- a previsao que
 # de fato alimenta o dashboard (Painel), com a incerteza crescente que a

@@ -68,6 +68,11 @@ estatística vencedora. O gráfico é a evidência visual dessa honestidade:
 não há uma linha reta entre "estatística" e "k=4", a decisão é humana e
 está documentada como tal.
 
+**Registro de governança formal**: este achado fecha o checkpoint `ML-2`
+do `PLAN.md` (Anexo A) — não é uma observação solta deste guia, é uma
+decisão de projeto documentada e fechada, sem retreino nem alteração de
+`ml.dim_cluster`/`ml.fct_perfil_cluster`.
+
 ### Seção [6c] — Análise visual do resultado treinado
 
 **1. Tabela de resumo executivo**: contagem, média e mediana de 6 métricas

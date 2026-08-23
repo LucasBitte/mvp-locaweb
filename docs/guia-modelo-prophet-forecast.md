@@ -100,12 +100,25 @@ ser ruído — sem autocorrelação em nenhum lag.
 
 - **Resultado real**: **0 quebras de patamar detectadas** na série
   agregada (recalculado com a mesma regra de `validar_serie()`, só
-  lendo `serie_diaria.parquet`, sem re-treinar nada). Consistente com o
+  lendo `serie_diaria.csv`, sem re-treinar nada). Consistente com o
   Painel 2 — é por isso que `prophet_regime` e `prophet_hist_completo`
   dão exatamente o mesmo resultado.
 - **Porquê importa**: mostra que a série TOTAL é relativamente estável
   (diferente de séries por equipe individuais, mais ruidosas — ver o guia
   do modelo Prophet por equipe, onde esse detector já causou um bug real).
+
+**Investigação do limiar** (adicionada depois do relatório inicial, ainda
+read-only — não altera `forecast_incidentes_revisado.py`): a razão
+`mediana_28d_atual / mediana_28d_anterior` variou entre **0,686 e 1,326**
+ao longo de **todo** 2025 na série agregada — nunca chegou perto dos
+limiares do detector (>2,0x ou <0,5x). 0% dos dias passaram sequer de
+1,5x/0,67x. **Conclusão**: o limiar não parece mal calibrado em si — ele é
+estruturalmente mais difícil de disparar numa série agregada de ~100+
+incidentes/dia (onde ruído de um dia se dilui na mediana móvel) do que
+numa série por equipe com menos de 1 incidente/dia (onde um único dia
+ruidoso já produz razões extremas — a mesma causa raiz do bug documentado
+em `CLAUDE.md` §10, Team11). Não é uma recomendação de mudar o limiar — é
+um achado sobre em qual escala de série esse detector é útil.
 
 **Painel 6 — Previsão futura D+1..D+7 com intervalo.** O "fan chart"
 clássico de forecast — previsão central com a faixa de incerteza que
