@@ -11,6 +11,7 @@
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx"
   },
   "include": ["src"],
