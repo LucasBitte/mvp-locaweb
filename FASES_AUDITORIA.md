@@ -11,11 +11,11 @@ Data: 2026-08-23
 | 1 | Validação de dados (queries read-only) | ✅ COMPLETA | 2026-08-23 |
 | 1.1 | Decisão: 1 tabela genérica vs. 3 específicas | ✅ COMPLETA (opção b) | 2026-08-23 |
 | 2.1 | Persistência de avaliações em ml_dev.fct_avaliacao_modelo | ✅ COMPLETA (277 registros) | 2026-08-23 |
-| 2.2 | Validação SHAP base_value | ⏳ BLOQUEADO (requer notebook) | — |
-| 2.3 | Renomear taxa_sla_violado_pct | ⏳ PENDENTE | — |
+| 2.2 | Validação SHAP base_value | ✅ COMPLETA (base_value = -0.7057) | 2026-08-23 |
+| 2.3 | Renomear taxa_sla_violado_pct | ✅ COMPLETA (Migration 027) | 2026-08-23 |
 | 3.1 | Modelos Pydantic + router /api/painel | ✅ COMPLETA (com fixes) | 2026-08-23 |
-| 3.2 | Routers /api/detalhe, /fatores, /clusters, /kpi, /alertas | ⏳ EM PROGRESSO | — |
-| 4 | Nova arquitetura visual (6 telas redesenhadas) | ⬜ | — |
+| 3.2 | Routers /api/detalhe, /fatores, /clusters, /kpi, /alertas | ✅ COMPLETA | 2026-08-23 |
+| 4 | Nova arquitetura visual (6 telas redesenhadas) | ⬜ PRÓXIMA | — |
 | 5 | Integração (religar as 6 telas às APIs) | ⬜ | — |
 | 6 | QA técnico (testes de contrato) | ⬜ | — |
 | 7 | QA visual (densidade, nomenclatura) | ⬜ | — |
