@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routers import painel
+
 load_dotenv()
 
 app = FastAPI(title="MVP Locaweb — AIOps Incidentes API")
@@ -15,6 +17,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Registrar routers
+app.include_router(painel.router)
 
 
 @app.get("/health")
