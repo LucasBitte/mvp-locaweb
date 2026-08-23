@@ -44,6 +44,9 @@ export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
           <text x={470} y={356} textAnchor="middle" fontFamily="Inter, sans-serif" fontSize={11} fill={SUB}>
             duração média (horas)
           </text>
+          <text x={16} y={166} textAnchor="middle" fontFamily="Inter, sans-serif" fontSize={11} fill={SUB} transform="rotate(-90 16 166)">
+            % excedeu tempo esperado
+          </text>
           {bubbles.map((b) => (
             <circle key={b.name} cx={b.cx} cy={b.cy} r={b.r} fill={b.fill} stroke={b.stroke} strokeWidth={1.5} />
           ))}
