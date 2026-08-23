@@ -4,6 +4,7 @@ nbconvert
 ipykernel
 matplotlib
 seaborn
+plotly
 missingno
 holidays
 pyarrow
