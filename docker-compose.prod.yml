@@ -1,0 +1,42 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: app/api/Dockerfile
+    container_name: mvp-locaweb-api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mvp-locaweb-api.rule=Host(`fiap.looplyai.com.br`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.mvp-locaweb-api.entrypoints=websecure"
+      - "traefik.http.routers.mvp-locaweb-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.mvp-locaweb-api.priority=10"
+      - "traefik.http.services.mvp-locaweb-api.loadbalancer.server.port=8000"
+
+  web:
+    build:
+      context: ./app/web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "https://fiap.looplyai.com.br"
+    container_name: mvp-locaweb-web
+    restart: unless-stopped
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mvp-locaweb-web.rule=Host(`fiap.looplyai.com.br`) && PathPrefix(`/`)"
+      - "traefik.http.routers.mvp-locaweb-web.entrypoints=websecure"
+      - "traefik.http.routers.mvp-locaweb-web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.mvp-locaweb-web.priority=1"
+      - "traefik.http.services.mvp-locaweb-web.loadbalancer.server.port=80"
+
+networks:
+  proxy:
+    external: true
