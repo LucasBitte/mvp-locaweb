@@ -5,6 +5,8 @@ import { MUTED, NAVY, SUB } from '../../lib/theme'
 import { SourceTag } from '../SourceTag'
 import { ErrorState, Loading } from '../ApiStatus'
 
+const cardClass = 'transition-transform duration-200 hover:-translate-y-[3px]'
+
 interface AlertasScreenProps {
   mostrarOrigem: boolean
 }
@@ -19,14 +21,14 @@ export function AlertasScreen({ mostrarOrigem }: AlertasScreenProps) {
   const recs = computeRecomendacoes(data.recomendacoes)
 
   return (
-    <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.35fr) minmax(0,1fr)', gap: 20, alignItems: 'start' }}>
+    <section className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr]" style={{ gap: 20, alignItems: 'start' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Alertas ativos</span>
           <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>Cada alerta é disparado por uma regra explícita, com origem visível</span>
         </div>
         {alerts.map((a, i) => (
-          <div key={`${a.rule}-${i}`} style={{ background: '#FFFFFF', borderRadius: 16, padding: '22px 24px', boxShadow: '0 4px 16px rgba(10,22,40,.03)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div key={`${a.rule}-${i}`} className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '22px 24px', boxShadow: '0 4px 16px rgba(10,22,40,.03)', display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ width: 8, height: 8, borderRadius: 999, background: a.dot }} />
@@ -64,7 +66,7 @@ export function AlertasScreen({ mostrarOrigem }: AlertasScreenProps) {
         </div>
       </div>
 
-      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 26px', boxShadow: '0 4px 16px rgba(10,22,40,.03)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 26px', boxShadow: '0 4px 16px rgba(10,22,40,.03)', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Recomendações</span>
           <span style={{ font: '400 12px/1.5 Inter,sans-serif', color: SUB }}>

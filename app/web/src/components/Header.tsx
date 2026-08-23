@@ -17,25 +17,16 @@ interface HeaderProps {
 export function Header({ activeTab, onSelectTab }: HeaderProps) {
   return (
     <header
+      className="px-4 sm:px-6 lg:px-10"
       style={{
         background: '#F0F3FF',
-        padding: '20px 40px 0',
         position: 'sticky',
         top: 0,
         zIndex: 20,
         backdropFilter: 'saturate(140%) blur(20px)',
       }}
     >
-      <div
-        style={{
-          maxWidth: 1360,
-          margin: '0 auto',
-          display: 'flex',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          gap: 32,
-        }}
-      >
+      <div className="max-w-[1360px] mx-auto flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 14 }}>
           <span style={{ font: '600 12px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.05em', color: SUB }}>
             Locaweb · FIAP · AIOps
@@ -68,11 +59,12 @@ export function Header({ activeTab, onSelectTab }: HeaderProps) {
           </span>
         </div>
       </div>
-      <nav style={{ maxWidth: 1360, margin: '0 auto', display: 'flex', gap: 6 }}>
+      <nav className="max-w-[1360px] mx-auto flex gap-1.5 overflow-x-auto scrollbar-none">
         {TABS.map((tab, i) => (
           <button
             key={tab.name}
             onClick={() => onSelectTab(i)}
+            className="shrink-0 whitespace-nowrap transition-colors hover:bg-[#F9F9FF]/70"
             style={{
               appearance: 'none',
               border: 0,

@@ -21,6 +21,7 @@ const cardStyle = {
   flexDirection: 'column' as const,
   gap: 14,
 }
+const cardClass = 'transition-transform duration-200 hover:-translate-y-[3px]'
 
 const kicker = { font: '600 12px/1 Inter,sans-serif', textTransform: 'uppercase' as const, letterSpacing: '.05em', color: SUB }
 const cardTitle = { font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }
@@ -49,8 +50,8 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 20 }}>
-        <div style={cardStyle}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 20 }}>
+        <div className={cardClass} style={cardStyle}>
           <span style={kicker}>Previsão D+1 · {data.previsao_d1.data}</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>
@@ -64,7 +65,7 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
           <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · PROPHET</SourceTag>
         </div>
 
-        <div style={cardStyle}>
+        <div className={cardClass} style={cardStyle}>
           <span style={kicker}>Previsão D+7 · média/dia</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>
@@ -79,7 +80,7 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
           <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · PROPHET</SourceTag>
         </div>
 
-        <div style={cardStyle}>
+        <div className={cardClass} style={cardStyle}>
           <span style={kicker}>Risco de OLA</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
             <span style={{ font: '700 32px/1 Manrope,sans-serif', letterSpacing: '-.02em', color: risco.color }}>{risco.label}</span>
@@ -99,7 +100,7 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
           <SourceTag visible={mostrarOrigem}>REGRA DETERMINÍSTICA</SourceTag>
         </div>
 
-        <div style={cardStyle}>
+        <div className={cardClass} style={cardStyle}>
           <span style={kicker}>Volume base 2025</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>
@@ -114,8 +115,8 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.55fr) minmax(0,1fr)', gap: 20 }}>
-        <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px 20px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr]" style={{ gap: 20 }}>
+        <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px 20px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={cardTitle}>Histórico — últimos {historico.length} dias</span>
@@ -145,7 +146,7 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
           </svg>
         </div>
 
-        <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px 20px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+        <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px 20px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={cardTitle}>Previsão D+1…D+7</span>
@@ -175,7 +176,7 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
         </div>
       </div>
 
-      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+      <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={cardTitle}>Pressão por equipe — D+1</span>
@@ -185,7 +186,11 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {teams.map((t) => (
-            <div key={t.name} style={{ display: 'grid', gridTemplateColumns: '88px 1fr 96px 104px', alignItems: 'center', gap: 16 }}>
+            <div
+              key={t.name}
+              className="grid grid-cols-[64px_1fr_72px_80px] gap-2 sm:grid-cols-[88px_1fr_96px_104px] sm:gap-4"
+              style={{ alignItems: 'center' }}
+            >
               <span style={{ font: "500 13px/1 'JetBrains Mono',monospace", color: NAVY }}>{t.name}</span>
               <div style={{ position: 'relative', height: 12, borderRadius: 6, background: '#F0F3FF' }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 6, background: t.fill, width: t.w }} />

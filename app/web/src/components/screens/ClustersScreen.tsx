@@ -5,6 +5,8 @@ import { MUTED, NAVY, SUB } from '../../lib/theme'
 import { SourceTag } from '../SourceTag'
 import { ErrorState, Loading } from '../ApiStatus'
 
+const cardClass = 'transition-transform duration-200 hover:-translate-y-[3px]'
+
 interface ClustersScreenProps {
   mostrarOrigem: boolean
 }
@@ -21,7 +23,7 @@ export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+      <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Perfis operacionais — duração × tempo excedido × volume</span>
@@ -48,7 +50,9 @@ export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
             % excedeu tempo esperado
           </text>
           {bubbles.map((b) => (
-            <circle key={b.name} cx={b.cx} cy={b.cy} r={b.r} fill={b.fill} stroke={b.stroke} strokeWidth={1.5} />
+            <circle key={b.name} cx={b.cx} cy={b.cy} r={b.r} fill={b.fill} stroke={b.stroke} strokeWidth={1.5}>
+              <title>{b.tooltip}</title>
+            </circle>
           ))}
           {bubGridY.map((g, i) => (
             <text key={`by${i}`} x={50} y={g.ty} textAnchor="end" fontFamily="JetBrains Mono, monospace" fontSize={10} fill={SUB}>
@@ -73,7 +77,7 @@ export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
         </svg>
       </div>
 
-      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+      <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Resumo executivo por cluster</span>
           <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · K-MEANS</SourceTag>
@@ -142,9 +146,9 @@ export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 20 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 20 }}>
         {clusters.map((c) => (
-          <div key={c.id} style={{ background: '#FFFFFF', borderRadius: 16, padding: 22, boxShadow: '0 4px 16px rgba(10,22,40,.03)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div key={c.id} className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: 22, boxShadow: '0 4px 16px rgba(10,22,40,.03)', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span
                 style={{

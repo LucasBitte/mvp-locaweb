@@ -8,6 +8,7 @@ import { ErrorState, Loading } from '../ApiStatus'
 
 const cardTitle = { font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }
 const cardSub = { font: '400 12px/1.4 Inter,sans-serif', color: SUB }
+const cardClass = 'transition-transform duration-200 hover:-translate-y-[3px]'
 
 interface FatoresScreenProps {
   mostrarOrigem: boolean
@@ -26,8 +27,8 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.15fr) minmax(0,1fr)', gap: 20 }}>
-        <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr]" style={{ gap: 20 }}>
+        <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={cardTitle}>Importância dos fatores</span>
@@ -50,7 +51,7 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
           </div>
         </div>
 
-        <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+        <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={cardTitle}>Por que este incidente tem risco elevado</span>
@@ -85,7 +86,7 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
         </div>
       </div>
 
-      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+      <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={cardTitle}>Categoria × dia da semana</span>
@@ -93,7 +94,8 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
           </div>
           <SourceTag variant="calculado" visible={mostrarOrigem}>CALCULADO · DW</SourceTag>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: `84px repeat(${dows.length},minmax(0,1fr))`, gap: 6, alignItems: 'center' }}>
+        <div className="overflow-x-auto">
+        <div style={{ display: 'grid', gridTemplateColumns: `84px repeat(${dows.length},minmax(0,1fr))`, gap: 6, alignItems: 'center', minWidth: 560 }}>
           <span />
           {dows.map((d) => (
             <span key={d} style={{ font: '600 11px/1 Inter,sans-serif', textAlign: 'center', letterSpacing: '.04em', color: SUB }}>
@@ -126,6 +128,7 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
               ))}
             </Fragment>
           ))}
+        </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
           <span style={{ font: '600 10px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em', color: SUB }}>Menor</span>

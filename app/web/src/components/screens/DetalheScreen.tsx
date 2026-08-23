@@ -25,6 +25,7 @@ const cardStyle = {
   gap: 16,
 }
 const cardTitle = { font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }
+const cardClass = 'transition-transform duration-200 hover:-translate-y-[3px]'
 
 interface DetalheScreenProps {
   mostrarOrigem: boolean
@@ -60,7 +61,7 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ background: '#F0F3FF', borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
+      <div style={{ background: '#F0F3FF', borderRadius: 16, padding: '20px 24px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 24 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span style={{ font: '600 12px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.05em', color: SUB }}>
             Foco padrão da tela
@@ -72,7 +73,7 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
             </span>
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           <span style={{ font: '600 10px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em', color: SUB }}>
             Filtro de prioridade
           </span>
@@ -110,7 +111,7 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
         {cardsPrioridade.map((prio) => {
           const cor = corDaPrioridade(prio.prioridade_num)
           return (
-            <div key={prio.prioridade_num} style={cardStyle}>
+            <div key={prio.prioridade_num} className={cardClass} style={cardStyle}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ font: "700 15px/1 'JetBrains Mono',monospace", color: NAVY }}>P{prio.prioridade_num}</span>
                 <span style={{ padding: '5px 10px', borderRadius: 999, background: '#E6ECFB', font: "500 11px/1 'JetBrains Mono',monospace", color: '#1E6FD9' }}>
@@ -144,7 +145,7 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
           )
         })}
 
-        <div style={{ ...cardStyle, gap: 14 }}>
+        <div className={cardClass} style={{ ...cardStyle, gap: 14 }}>
           <span style={{ font: '600 12px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.05em', color: SUB }}>
             Composição do volume histórico
           </span>
@@ -166,8 +167,8 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 20 }}>
-        <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
+        <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
             <span style={cardTitle}>Top categorias — volume previsto D+1</span>
             <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO</SourceTag>
@@ -185,7 +186,7 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
           </div>
         </div>
 
-        <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+        <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
             <span style={cardTitle}>Top produtos — volume previsto D+1</span>
             <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO</SourceTag>
@@ -209,7 +210,7 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
         </div>
       </div>
 
-      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+      <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={cardTitle}>Recorrência operacional — categoria</span>
@@ -224,7 +225,7 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
             Nenhuma categoria classificada como recorrente crescente/estável nesta janela.
           </p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 16, marginTop: 16 }}>
+          <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 16, marginTop: 16 }}>
             {recur.map((r) => (
               <div key={r.name} style={{ background: '#F9F9FF', borderRadius: 12, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

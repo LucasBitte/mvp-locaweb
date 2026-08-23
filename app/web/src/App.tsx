@@ -20,13 +20,15 @@ function App() {
   return (
     <div style={{ minHeight: '100vh', background: BG, padding: '0 0 64px' }}>
       <Header activeTab={tab} onSelectTab={setTab} />
-      <main style={{ maxWidth: 1360, margin: '0 auto', padding: '32px 40px 0' }}>
-        {tab === 0 && <PainelScreen mostrarOrigem={MOSTRAR_ORIGEM} limiarCritico={LIMIAR_CRITICO_PCT} />}
-        {tab === 1 && <DetalheScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
-        {tab === 2 && <KpiScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
-        {tab === 3 && <FatoresScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
-        {tab === 4 && <ClustersScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
-        {tab === 5 && <AlertasScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
+      <main className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-10 pt-8">
+        <div key={tab} className="animate-[fadeIn_260ms_cubic-bezier(.2,0,0,1)]">
+          {tab === 0 && <PainelScreen mostrarOrigem={MOSTRAR_ORIGEM} limiarCritico={LIMIAR_CRITICO_PCT} />}
+          {tab === 1 && <DetalheScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
+          {tab === 2 && <KpiScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
+          {tab === 3 && <FatoresScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
+          {tab === 4 && <ClustersScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
+          {tab === 5 && <AlertasScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
+        </div>
       </main>
     </div>
   )

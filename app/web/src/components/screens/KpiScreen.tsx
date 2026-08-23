@@ -16,6 +16,7 @@ const cardStyle = {
 }
 const kicker = { font: '600 12px/1 Inter,sans-serif', textTransform: 'uppercase' as const, letterSpacing: '.05em', color: SUB }
 const cardTitle = { font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }
+const cardClass = 'transition-transform duration-200 hover:-translate-y-[3px]'
 
 interface KpiScreenProps {
   mostrarOrigem: boolean
@@ -33,8 +34,8 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 20 }}>
-        <div style={cardStyle}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 20 }}>
+        <div className={cardClass} style={cardStyle}>
           <span style={kicker}>Dias decorridos · {resumo.ano}</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>{resumo.diasDecorridos}</span>
@@ -48,7 +49,7 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
           </span>
         </div>
 
-        <div style={cardStyle}>
+        <div className={cardClass} style={cardStyle}>
           <span style={kicker}>OLA quebrados no ano</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>{resumo.totalQuebras}</span>
@@ -58,7 +59,7 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
           <SourceTag variant="historico" visible={mostrarOrigem}>HISTÓRICO · DW · kpi_status_int</SourceTag>
         </div>
 
-        <div style={cardStyle}>
+        <div className={cardClass} style={cardStyle}>
           <span style={kicker}>Status geral</span>
           <span style={{ font: '700 32px/1 Manrope,sans-serif', letterSpacing: '-.02em', color: resumo.statusGeral.fg }}>
             {resumo.statusGeral.label}
@@ -67,7 +68,7 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
           <SourceTag visible={mostrarOrigem}>REGRA · FAIXA ANUAL</SourceTag>
         </div>
 
-        <div style={cardStyle}>
+        <div className={cardClass} style={cardStyle}>
           <span style={kicker}>Probabilidade média — OLA quebrado</span>
           <span style={{ font: "600 40px/1 'JetBrains Mono',monospace", letterSpacing: '-.02em', color: NAVY }}>{resumo.probabilidadeMedia}%</span>
           <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>Média P2/P3 — projeção linear, não modelo estatístico</span>
@@ -75,7 +76,7 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
         </div>
       </div>
 
-      <div style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
+      <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={cardTitle}>Meta anual por prioridade × indicador</span>
@@ -88,7 +89,7 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {bands.map((b) => (
-            <div key={b.key} style={{ display: 'grid', gridTemplateColumns: '190px 1fr', gap: 20, alignItems: 'center' }}>
+            <div key={b.key} className="grid grid-cols-1 sm:grid-cols-[190px_1fr]" style={{ gap: 20, alignItems: 'center' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <span style={{ font: "700 14px/1.3 'JetBrains Mono',monospace", color: NAVY }}>
                   {b.prio} · {b.indicadorLabel}
@@ -109,7 +110,7 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
                   atingimento {b.att}
                 </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,minmax(0,1fr))', gap: 5 }}>
+              <div className="grid grid-cols-3 sm:grid-cols-6" style={{ gap: 5 }}>
                 {b.cells.map((c, i) => (
                   <div
                     key={i}
@@ -134,10 +135,11 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 20 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 20 }}>
         {probabilidades.map((p) => (
           <div
             key={p.prio}
+            className={cardClass}
             style={{
               background: '#F0F3FF',
               borderRadius: 16,

@@ -460,6 +460,7 @@ export function computeBolhas(clusters: ClusterItem[]) {
       ly: +(cy + 5).toFixed(1),
       sy: +(cy + r + 16).toFixed(1),
       meta: `${fmt1(dur)}h · ${fmt1(viol)}%`, // só x (duração) e y (% excedeu) — volume já está no tamanho da bolha
+      tooltip: `Cluster ${c.cluster_id} · ${fmt1(dur)}h duração média · ${fmt1(viol)}% excedeu tempo esperado · ${fmt1(c.pct_volume)}% do volume`,
     }
   })
 
