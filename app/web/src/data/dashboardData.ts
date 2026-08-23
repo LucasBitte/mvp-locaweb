@@ -183,11 +183,26 @@ export function riscoOlaVisual(nivel: 'baixo' | 'medio' | 'alto') {
 const SUB_COLOR = '#7A8498'
 const NAVY_COLOR = '#101C2E'
 
-export function computePrioridadeFiltro() {
-  return ['Todas', 'P1', 'P2', 'P3', 'P4'].map((label) => {
-    const on = label === 'P2' || label === 'P3'
-    return { label, bg: on ? '#FFFFFF' : 'transparent', fg: on ? NAVY_COLOR : SUB_COLOR, shadow: on ? '0 4px 16px rgba(10,22,40,.06)' : 'none' }
-  })
+export const PRIORIDADES_FILTRAVEIS = [1, 2, 3, 4] as const
+
+/** `selecionadas` = prioridade_num atualmente exibidas. 'Todas' fica "ligado"
+ * quando as 4 estão selecionadas. */
+export function computePrioridadeFiltro(selecionadas: number[]) {
+  const todasLigadas = PRIORIDADES_FILTRAVEIS.every((n) => selecionadas.includes(n))
+  return [
+    { label: 'Todas', value: 'todas' as const, on: todasLigadas },
+    ...PRIORIDADES_FILTRAVEIS.map((n) => ({ label: `P${n}`, value: n, on: selecionadas.includes(n) })),
+  ].map((item) => ({
+    ...item,
+    bg: item.on ? '#FFFFFF' : 'transparent',
+    fg: item.on ? NAVY_COLOR : SUB_COLOR,
+    shadow: item.on ? '0 4px 16px rgba(10,22,40,.06)' : 'none',
+  }))
+}
+
+const CORES_PRIORIDADE: Record<number, string> = { 1: RED, 2: AMBER, 3: GREEN, 4: BLUE }
+export function corDaPrioridade(prioridade_num: number): string {
+  return CORES_PRIORIDADE[prioridade_num] ?? SUB
 }
 
 /** Resume o banner "P2 + P3 — X% do volume total" a partir de share_historico real. */
@@ -416,35 +431,82 @@ export function computeHeatmap(celulas: HeatmapCelula[]) {
 // Clusters
 // ---------------------------------------------------------------------------
 
+// Eixo Y fixo em [90,100] — mesma decisão do bubble chart do notebook
+// (model_clustering_kmeans_Revisado.ipynb, célula [6c]): os 4 clusters reais
+// ficam entre ~94% e ~98% de taxa_excedeu_tempo_esperado_pct; em escala
+// livre (0-100%) essa diferença real fica achatada perto do topo.
+const BOLHA_Y_MIN = 90
+const BOLHA_Y_MAX = 100
+// Equivalente ao size_max do Plotly — evita a maior bolha engolir o gráfico.
+const BOLHA_RAIO_MAX = 40
+
 export function computeBolhas(clusters: ClusterItem[]) {
   const BX0 = 60, BX1 = 880, BY0 = 16, BY1 = 316
   const durMax = Math.max(...clusters.map((c) => c.duracao_media_horas ?? 0), 1) * 1.1
-  const violMax = Math.max(...clusters.map((c) => c.taxa_excedeu_tempo_esperado_pct ?? 0), 1) * 1.1
+  const violRange = BOLHA_Y_MAX - BOLHA_Y_MIN
   const bubbles = clusters.map((c) => {
     const dur = c.duracao_media_horas ?? 0
     const viol = c.taxa_excedeu_tempo_esperado_pct ?? 0
     const cx = +(BX0 + (dur / durMax) * (BX1 - BX0)).toFixed(1)
-    const cy = +(BY0 + (1 - viol / violMax) * (BY1 - BY0)).toFixed(1)
-    const r = +(6 + Math.sqrt(c.pct_volume) * 4.5).toFixed(1)
+    const cy = +(BY0 + (1 - (viol - BOLHA_Y_MIN) / violRange) * (BY1 - BY0)).toFixed(1)
+    const r = +Math.min(6 + Math.sqrt(c.pct_volume) * 4.5, BOLHA_RAIO_MAX).toFixed(1)
     return {
       cx,
       cy,
       r,
       name: c.cluster_id,
       stroke: c.cor_hex,
-      fill: `${c.cor_hex}2E`,
+      fill: `${c.cor_hex}B3`, // ~70% alpha — equivalente ao opacity=0.7 do Plotly
       ly: +(cy + 5).toFixed(1),
       sy: +(cy + r + 16).toFixed(1),
-      meta: `${fmt1(dur)}h · ${fmt1(viol)}% · ${fmt1(c.pct_volume)}%`,
+      meta: `${fmt1(dur)}h · ${fmt1(viol)}%`, // só x (duração) e y (% excedeu) — volume já está no tamanho da bolha
     }
   })
 
   // Clusters reais podem ficar próximos em duração/taxa (ex.: A e C) a ponto
-  // de as bolhas se sobreporem — sem isso os rótulos ficam ilegíveis
-  // (texto de um cluster em cima do outro). Escalona verticalmente os
-  // rótulos de qualquer grupo cujos centros fiquem a menos que a soma dos
-  // raios de distância; a sobreposição das bolhas em si é mantida (é o dado
-  // real, não um artefato a esconder).
+  // de as BOLHAS EM SI se sobreporem, não só os rótulos — empurra os centros
+  // ao longo da reta que os une até a distância ficar >= soma dos raios
+  // (mesma técnica de colisão de bubble charts tipo D3 force layout).
+  // O valor real nunca muda: eixos, texto "meta" abaixo de cada bolha e a
+  // tabela de resumo continuam com a posição/número verdadeiros — só o
+  // centro da bolha recebe um deslocamento pequeno pra não ocluir a vizinha.
+  const PADDING_COLISAO = 12
+  for (let iter = 0; iter < 60; iter++) {
+    let moveu = false
+    for (let i = 0; i < bubbles.length; i++) {
+      for (let j = i + 1; j < bubbles.length; j++) {
+        const a = bubbles[i]
+        const b = bubbles[j]
+        const dx = b.cx - a.cx
+        const dy = b.cy - a.cy
+        const dist = Math.hypot(dx, dy) || 0.01
+        const minDist = a.r + b.r + PADDING_COLISAO
+        if (dist < minDist) {
+          const overlap = (minDist - dist) / 2
+          const ux = dx / dist
+          const uy = dy / dist
+          a.cx = +(a.cx - ux * overlap).toFixed(1)
+          a.cy = +(a.cy - uy * overlap).toFixed(1)
+          b.cx = +(b.cx + ux * overlap).toFixed(1)
+          b.cy = +(b.cy + uy * overlap).toFixed(1)
+          moveu = true
+        }
+      }
+    }
+    if (!moveu) break
+  }
+  // mantém as bolhas dentro da área do gráfico depois do empurrão, e
+  // recalcula a posição do rótulo (ly/sy) a partir do centro já ajustado
+  for (const b of bubbles) {
+    b.cx = Math.min(Math.max(b.cx, BX0 + b.r), BX1 - b.r)
+    b.cy = Math.min(Math.max(b.cy, BY0 + b.r), BY1 - b.r)
+    b.ly = +(b.cy + 5).toFixed(1)
+    b.sy = +(b.cy + b.r + 16).toFixed(1)
+  }
+
+  // Escalona verticalmente os rótulos de qualquer par que ainda fique
+  // colado depois do empurrão acima (raro, mas os limites do gráfico podem
+  // impedir separação total em casos extremos).
   const usados = new Set<number>()
   for (let i = 0; i < bubbles.length; i++) {
     if (usados.has(i)) continue
@@ -465,7 +527,7 @@ export function computeBolhas(clusters: ClusterItem[]) {
     }
   }
   const bubGridY = [0, 0.25, 0.5, 0.75, 1].map((t) => {
-    const v = t * violMax
+    const v = BOLHA_Y_MIN + t * violRange
     const y = +(BY0 + (1 - t) * (BY1 - BY0)).toFixed(1)
     return { y, ty: +(y + 3.5).toFixed(1), label: `${fmt1(v)}%` }
   })
@@ -474,6 +536,21 @@ export function computeBolhas(clusters: ClusterItem[]) {
     label: `${fmt1(t * durMax)}h`,
   }))
   return { bubbles, bubGridY, bubGridX }
+}
+
+/** Tabela resumo executivo dos clusters — mesmo espírito da tabela do
+ * notebook (model_clustering_kmeans_Revisado.ipynb, célula [6c] item 1),
+ * usando os campos já expostos por /api/clusters (sem endpoint novo). */
+export function computeResumoClusters(clusters: ClusterItem[]) {
+  return clusters.map((c) => ({
+    id: c.cluster_id,
+    cor: c.cor_hex,
+    n: fmtNum(c.n_incidentes),
+    pctVolume: `${fmt1(c.pct_volume)}%`,
+    duracaoMedia: c.duracao_media_horas !== null ? `${fmt1(c.duracao_media_horas)} h` : '—',
+    taxaResolucao: c.taxa_resolucao_pct !== null ? `${fmt1(c.taxa_resolucao_pct)}%` : '—',
+    taxaExcedeuTempo: c.taxa_excedeu_tempo_esperado_pct !== null ? `${fmt1(c.taxa_excedeu_tempo_esperado_pct)}%` : '—',
+  }))
 }
 
 export function computeClustersCards(clusters: ClusterItem[]) {

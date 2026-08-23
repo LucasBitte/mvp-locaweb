@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { getDetalhe } from '../../lib/api'
 import { useApi } from '../../lib/useApi'
 import {
@@ -7,8 +8,10 @@ import {
   computeRecorrencia,
   computeTopCategorias,
   computeTopProdutos,
+  corDaPrioridade,
+  PRIORIDADES_FILTRAVEIS,
 } from '../../data/dashboardData'
-import { AMBER, GREEN, MUTED, NAVY, SUB } from '../../lib/theme'
+import { MUTED, NAVY, SUB } from '../../lib/theme'
 import { SourceTag } from '../SourceTag'
 import { ErrorState, Loading } from '../ApiStatus'
 
@@ -28,6 +31,7 @@ interface DetalheScreenProps {
 }
 
 export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
+  const [selecionadas, setSelecionadas] = useState<number[]>([2, 3])
   const categoria = useApi(() => getDetalhe({ agrupamento: 'categoria' }), [])
   const produto = useApi(() => getDetalhe({ agrupamento: 'produto' }), [])
 
@@ -35,15 +39,24 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
   if (categoria.error || !categoria.data) return <ErrorState error={categoria.error ?? 'sem dado'} />
   if (produto.error || !produto.data) return <ErrorState error={produto.error ?? 'sem dado'} />
 
-  const prios = computePrioridadeFiltro()
+  const prios = computePrioridadeFiltro(selecionadas)
   const foco = computeFocoP2P3(categoria.data.prioridades)
   const mix = computeMixHistorico(categoria.data.prioridades)
   const cats = computeTopCategorias(categoria.data.top_entidades)
   const prods = computeTopProdutos(produto.data.top_entidades)
   const recur = computeRecorrencia(categoria.data.recorrencia.entidades)
 
-  const p2 = categoria.data.prioridades.find((p) => p.prioridade_num === 2)
-  const p3 = categoria.data.prioridades.find((p) => p.prioridade_num === 3)
+  const cardsPrioridade = categoria.data.prioridades.filter((p) => selecionadas.includes(p.prioridade_num))
+
+  function alternarPrioridade(value: 'todas' | number) {
+    if (value === 'todas') {
+      setSelecionadas((atual) =>
+        PRIORIDADES_FILTRAVEIS.every((n) => atual.includes(n)) ? [] : [...PRIORIDADES_FILTRAVEIS]
+      )
+      return
+    }
+    setSelecionadas((atual) => (atual.includes(value) ? atual.filter((n) => n !== value) : [...atual, value]))
+  }
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -66,6 +79,8 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
           {prios.map((p) => (
             <button
               key={p.label}
+              type="button"
+              onClick={() => alternarPrioridade(p.value)}
               style={{
                 appearance: 'none',
                 cursor: 'pointer',
@@ -84,12 +99,17 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 20 }}>
-        {[
-          { prio: p2, cor: AMBER },
-          { prio: p3, cor: GREEN },
-        ].map(({ prio, cor }) =>
-          prio ? (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 20 }}>
+        {cardsPrioridade.length === 0 && (
+          <div style={{ ...cardStyle, gridColumn: '1 / -1' }}>
+            <span style={{ font: '400 13px/1.5 Inter,sans-serif', color: MUTED }}>
+              Nenhuma prioridade selecionada — use o filtro acima para escolher ao menos uma.
+            </span>
+          </div>
+        )}
+        {cardsPrioridade.map((prio) => {
+          const cor = corDaPrioridade(prio.prioridade_num)
+          return (
             <div key={prio.prioridade_num} style={cardStyle}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ font: "700 15px/1 'JetBrains Mono',monospace", color: NAVY }}>P{prio.prioridade_num}</span>
@@ -121,8 +141,8 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
                 <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · fct_previsao_prioridade</SourceTag>
               </div>
             </div>
-          ) : null
-        )}
+          )
+        })}
 
         <div style={{ ...cardStyle, gap: 14 }}>
           <span style={{ font: '600 12px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.05em', color: SUB }}>
