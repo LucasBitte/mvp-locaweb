@@ -249,15 +249,16 @@ def get_clusters():
                 impacto_volume_excedencia_pct=impacto * 100.0,
             ))
 
-        # 2. Diagnóstico k — ml_dev.fct_avaliacao_modelo é formato longo
+        # 2. Diagnóstico k — ml.fct_avaliacao_modelo é formato longo
         # (modelo, dimensao, chave_dimensao, metrica, valor), não tem colunas
         # k/silhouette/davies_bouldin dedicadas — precisa pivotar em Python.
         # pca_variancia não é persistida (não depende de k, é do PCA global) —
         # segue como constante documentada, sinalizada no frontend.
+        # Promovida de ml_dev para ml na Fase 5 (dado já validado).
         diagnostico_kmeans = []
         cur.execute("""
             SELECT chave_dimensao, metrica, valor
-            FROM ml_dev.fct_avaliacao_modelo
+            FROM ml.fct_avaliacao_modelo
             WHERE modelo = 'kmeans' AND dimensao = 'k'
             ORDER BY chave_dimensao
         """)
@@ -351,13 +352,12 @@ def get_alertas(limit: Optional[int] = Query(20, ge=1, le=100)):
 
     try:
         # 1. Alertas ativos
-        # NOTA: ml.alertas_ativos nunca existiu em produção. Servindo de
-        # ml_dev.alertas_ativos (populado por scripts/create_and_populate_alertas_dev.py)
-        # até uma decisão de promover para `ml` na Fase 5.
+        # Promovida de ml_dev para ml na Fase 5 (migration 028; regra e dado
+        # já validados na Fase 4.2 via scripts/create_and_populate_alertas_dev.py).
         alertas_ativos = []
         cur.execute("""
             SELECT id, severidade, condicao, cluster_id, equipe_id, origem
-            FROM ml_dev.alertas_ativos
+            FROM ml.alertas_ativos
             ORDER BY CASE severidade
                 WHEN 'crítica' THEN 4 WHEN 'alta' THEN 3
                 WHEN 'média' THEN 2 ELSE 1 END DESC
