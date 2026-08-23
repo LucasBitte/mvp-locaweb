@@ -13,10 +13,11 @@ Data: 2026-08-23
 | 2.1 | Persistência de avaliações em ml_dev.fct_avaliacao_modelo | ✅ COMPLETA (277 registros) | 2026-08-23 |
 | 2.2 | Validação SHAP base_value | ⏳ BLOQUEADO (requer notebook) | — |
 | 2.3 | Renomear taxa_sla_violado_pct | ⏳ PENDENTE | — |
-| 3 | Camada dados/API (campos novos nos 6 endpoints) | ⏳ EM PROGRESSO | — |
+| 3.1 | Modelos Pydantic + router /api/painel | ✅ COMPLETA (com fixes) | 2026-08-23 |
+| 3.2 | Routers /api/detalhe, /fatores, /clusters, /kpi, /alertas | ⏳ EM PROGRESSO | — |
 | 4 | Nova arquitetura visual (6 telas redesenhadas) | ⬜ | — |
 | 5 | Integração (religar as 6 telas às APIs) | ⬜ | — |
-| 6 | QA técnico (testes de contrato, validação SHAP) | ⬜ | — |
+| 6 | QA técnico (testes de contrato) | ⬜ | — |
 | 7 | QA visual (densidade, nomenclatura) | ⬜ | — |
 | 8 | Validação contra requisitos (Part C, PLAN.md aceites) | ⬜ | — |
 

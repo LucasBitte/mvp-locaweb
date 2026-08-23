@@ -66,7 +66,7 @@ def get_painel(data_base: Optional[str] = Query(None, description="YYYY-MM-DD (d
         cur.execute("""
             SELECT COUNT(*) as total
             FROM dw.fct_incidentes
-            WHERE DATE(aberto) = DATE(%s)
+            WHERE DATE(aberto_at) = DATE(%s)
             AND prioridade_num IN (2, 3)
         """, (data_execucao,))
         total_chamados = cur.fetchone()["total"] or 0
@@ -141,7 +141,7 @@ def get_painel(data_base: Optional[str] = Query(None, description="YYYY-MM-DD (d
             ))
 
         # 6. Volume total do ano (referência)
-        cur.execute("SELECT COUNT(*) as total FROM dw.fct_incidentes WHERE EXTRACT(YEAR FROM aberto) = 2025")
+        cur.execute("SELECT COUNT(*) as total FROM dw.fct_incidentes WHERE EXTRACT(YEAR FROM aberto_at) = 2025")
         vol_year = cur.fetchone()["total"] or 41441  # fallback
 
         # 7. Categoria top (volume previsto)
