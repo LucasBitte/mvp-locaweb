@@ -200,6 +200,10 @@ mvp-locaweb/
 - Plano de fechamento de lacunas do desafio (fases, matriz das 6 telas, anexo de governança de ML): `PLAN.md`
 - EDA consolidada (8 evidências, Achado/Impacto/Decisão): `docs/eda-consolidada.md`
 - Métricas de validação consolidadas (Prophet/XGBoost/K-Means, com achados que exigem decisão humana): `docs/metricas-validacao.md`
+- Guia educacional do modelo de risco XGBoost (gráficos, métricas e glossário — explica a seção 13 de `notebooks/model_risk_xgboost_.ipynb`): `docs/guia-modelo-risco-xgboost.md`
+- Guia educacional do modelo K-Means (gráficos, métricas e glossário — explica as seções `[6c]`/`10` de `notebooks/model_clustering_kmeans_Revisado.ipynb`): `docs/guia-modelo-kmeans-clusters.md`
+- Guia educacional do Prophet forecast total (gráficos, métricas e glossário — explica `notebooks/forecast_incidentes_graficos.py`, script novo que só lê `data/ml/prophet/*.parquet` e plota): `docs/guia-modelo-prophet-forecast.md`
+- Guia educacional do Prophet por equipe (arquitetura híbrida A/B/C, gráficos e glossário — explica `notebooks/forecast_equipe_graficos.py`, script novo que lê `ml.fct_previsao_grupo`/`ml.fct_pressao_equipe` direto do banco, read-only): `docs/guia-modelo-prophet-equipe.md`
 - Changelog das Fases 1-5/10/12/13 (tabelas novas, resultados reais): `docs/changelog-fechamento-lacunas-2026-08-22.md`
 - Changelog da Fase 14 (API FastAPI — endpoints, achados de auditoria, bug do SHAP corrigido): `docs/changelog-fase14-api-2026-08-22.md`
 - Changelog da Fase 15 (React religado à API real — redesenhos de tela, achado do venv): `docs/changelog-fase15-religar-frontend-2026-08-22.md`
