@@ -16,7 +16,8 @@ Data: 2026-08-23
 | 3.1 | Modelos Pydantic + router /api/painel | ✅ COMPLETA (com fixes) | 2026-08-23 |
 | 3.2 | Routers /api/detalhe, /fatores, /clusters, /kpi, /alertas | ⚠️ CORRIGIDA na Fase 4.2 (ver nota) | 2026-08-23 |
 | 4.2 | Telas 03 Fatores, 04 Clusters, 05 Alertas (React + recharts) | ✅ COMPLETA | 2026-08-23 |
-| 5 | Integração (ml_dev → ml; SHAP base_value; K-Means por incidente) | ⬜ PRÓXIMA | — |
+| 5 | Promover ml_dev.alertas_ativos/fct_avaliacao_modelo → ml | ✅ COMPLETA (migration 028) | 2026-08-23 |
+| 5 | Rerun K-Means p/ persistir cluster_id por incidente | ❌ BLOQUEADO (ver nota) | 2026-08-23 |
 | 6 | QA técnico (testes de contrato) | ⬜ | — |
 | 7 | QA visual (densidade, nomenclatura) | ⬜ | — |
 | 8 | Validação contra requisitos (Part C, PLAN.md aceites) | ⬜ | — |
@@ -135,7 +136,52 @@ Data: 2026-08-23
 | `f029c82` | 3.1 | Modelos Pydantic + /api/painel | 2026-08-23 |
 | `25bbd7d` | 3.1 | Fix aberto_at | 2026-08-23 |
 | `a929fb6` | 3.2 | 5 routers (detalhe, fatores, clusters, kpi, alertas) | 2026-08-23 |
-| _(pendente commit)_ | 4.2 | Telas 03/04/05 + correção de SQL dos 6 routers + ml_dev.alertas_ativos | 2026-08-23 |
+| `19002c6` | 4.2 | fix: scaffold app/web (tsc -b nunca tinha rodado) | 2026-08-23 |
+| `4b52871` | 4.2 | fix: bugs de SQL dos 6 routers (nunca testados contra o banco) | 2026-08-23 |
+| `4a7066f` | 4.2 | feat: telas 03 Risco, 04 Perfis, 05 Ações | 2026-08-23 |
+| `91a50f0` | 4.2 | docs: status Fase 4.2 | 2026-08-23 |
+| `122af87` | 5 | fix: notebook K-Means — coluna stale + guarda anti-sobrescrita | 2026-08-23 |
+| `2c87b60` | 5 | feat: promove ml_dev.alertas_ativos/fct_avaliacao_modelo → ml | 2026-08-23 |
+
+---
+
+## ⚠️ Achado aberto — divergência do K-Means (Fase 5)
+
+Tentativa de rerun do `model_clustering_kmeans_Revisado.ipynb` para persistir
+`cluster_id` por incidente (destravaria `composicao_por_prioridade`/
+`_categoria` da Tela 04) **foi abortada por uma guarda de segurança** antes de
+qualquer escrita em produção. O rerun produziu um perfil agregado diferente
+do que está em `ml.fct_perfil_cluster` hoje:
+
+| cluster | Δ pct_volume | Δ taxa_excedeu_tempo_esperado_pct |
+|---|---|---|
+| A | 7.48pp | 0.53pp |
+| B | 0.76pp | 0.40pp |
+| C | 7.62pp | 0.87pp |
+| D | 0.62pp | 0.02pp |
+
+**Investigado e descartado como causa:**
+- Não é artefato de threading/BLAS (mesmo resultado com `OMP_NUM_THREADS=1`).
+- Não é nondeterminismo do algoritmo (2 reruns independentes deram o
+  resultado idêntico, byte a byte).
+- Não é ordem de linhas do `SELECT * FROM ml.ml_cluster_dataset` (2 queries
+  seguidas retornaram a mesma ordem).
+- Não é código desatualizado (`git log` confirma que nenhum commit tocou
+  `05_ml_feature_marts.ipynb` nem o próprio notebook K-Means desde
+  `d694782`, o commit que gerou o `ml.fct_perfil_cluster` atual).
+
+**Não investigado ainda:** se `ml.ml_cluster_dataset` mudou de conteúdo
+(não só de contagem — confirmado 41.441 linhas nos dois momentos) entre
+2026-08-22 11:56 (quando `fct_perfil_cluster` foi gravado) e agora, por
+algum processo fora do controle de versão (execução manual, migration não
+documentada, etc.). A/C divergem forte, B/D quase não mudam — mais
+compatível com uma realocação real de ~3.100 incidentes entre A e C do que
+com ruído numérico.
+
+**Estado atual**: `ml.fct_perfil_cluster` e `ml.ml_cluster_dataset.cluster_id`
+seguem exatamente como estavam antes desta tentativa (guarda abortou antes
+do `TRUNCATE`). Nenhum dado de produção foi alterado. Tela 04 segue com
+`composicao_por_prioridade`/`_categoria` como `sem-fonte`.
 
 ---
 
@@ -146,14 +192,12 @@ Data: 2026-08-23
    - [ ] Calcular e gravar `base_value` em `ml.fct_shap_incidente`
    - Bloqueia: waterfall da Tela 03 (hoje `sem-fonte`)
 
-2. **Fase 5** (decisões de integração/promoção ml_dev → ml)
-   - [ ] Decidir se `ml_dev.alertas_ativos` é promovida para `ml.alertas_ativos`
-         (schema + regra já validados contra dado real)
-   - [ ] Decidir se/quando rerodar o notebook K-Means persistindo o
-         cluster_id por incidente (destrava `composicao_por_prioridade`/
-         `_categoria` da Tela 04) — retreino de modelo, precisa aprovação
-   - [ ] Migrar `ml_dev.fct_avaliacao_modelo` → `ml.fct_avaliacao_modelo`
-         (a tabela em produção já existe via migration 026, mas vazia)
+2. **Fase 5 — divergência do K-Means** (ver seção acima)
+   - [ ] Decidir como investigar a divergência A/C (comparar centróides,
+         checar se `ml.ml_cluster_dataset` foi tocado fora do notebook)
+   - [ ] Só depois disso: rerun + persistir `cluster_id` por incidente
+
+3. **Fase 5 — restante**
    - [ ] Implementar `/api/alertas.recomendacoes` (hoje vazio)
 
 3. **Fases 6-8** (QA + Aceite)
