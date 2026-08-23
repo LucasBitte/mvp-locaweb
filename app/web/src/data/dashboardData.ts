@@ -546,10 +546,8 @@ export function computeResumoClusters(clusters: ClusterItem[]) {
   return clusters.map((c) => ({
     id: c.cluster_id,
     cor: c.cor_hex,
-    n: fmtNum(c.n_incidentes),
     pctVolume: `${fmt1(c.pct_volume)}%`,
     duracaoMedia: c.duracao_media_horas !== null ? `${fmt1(c.duracao_media_horas)} h` : '—',
-    taxaResolucao: c.taxa_resolucao_pct !== null ? `${fmt1(c.taxa_resolucao_pct)}%` : '—',
     taxaExcedeuTempo: c.taxa_excedeu_tempo_esperado_pct !== null ? `${fmt1(c.taxa_excedeu_tempo_esperado_pct)}%` : '—',
   }))
 }

@@ -86,7 +86,7 @@ export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                {['Cluster', 'N incidentes', '% do volume', 'Duração média', 'Taxa resolução', 'Excedeu tempo esperado'].map((h) => (
+                {['Cluster', '% do volume', 'Duração média', 'Excedeu tempo esperado'].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -125,16 +125,10 @@ export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
                     </span>
                   </td>
                   <td style={{ padding: '10px 12px', textAlign: 'right', font: "500 13px/1 'JetBrains Mono',monospace", color: NAVY, borderBottom: '1px solid rgba(10,22,40,.06)' }}>
-                    {r.n}
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', font: "500 13px/1 'JetBrains Mono',monospace", color: NAVY, borderBottom: '1px solid rgba(10,22,40,.06)' }}>
                     {r.pctVolume}
                   </td>
                   <td style={{ padding: '10px 12px', textAlign: 'right', font: "500 13px/1 'JetBrains Mono',monospace", color: NAVY, borderBottom: '1px solid rgba(10,22,40,.06)' }}>
                     {r.duracaoMedia}
-                  </td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', font: "500 13px/1 'JetBrains Mono',monospace", color: NAVY, borderBottom: '1px solid rgba(10,22,40,.06)' }}>
-                    {r.taxaResolucao}
                   </td>
                   <td style={{ padding: '10px 12px', textAlign: 'right', font: "500 13px/1 'JetBrains Mono',monospace", color: r.cor, borderBottom: '1px solid rgba(10,22,40,.06)' }}>
                     {r.taxaExcedeuTempo}
