@@ -9,9 +9,11 @@ Data: 2026-08-23
 | Fase | O quê | Status | Data |
 |------|-------|--------|------|
 | 1 | Validação de dados (queries read-only) | ✅ COMPLETA | 2026-08-23 |
-| 1.1 | Decisão: 1 tabela genérica vs. 3 específicas | ⏳ EM PROGRESSO | — |
-| 2 | Correções modelo/semântica (persistência, SHAP base_value) | ⬜ | — |
-| 3 | Camada dados/API (campos novos nos 6 endpoints) | ⬜ | — |
+| 1.1 | Decisão: 1 tabela genérica vs. 3 específicas | ✅ COMPLETA (opção b) | 2026-08-23 |
+| 2.1 | Persistência de avaliações em ml_dev.fct_avaliacao_modelo | ✅ COMPLETA (277 registros) | 2026-08-23 |
+| 2.2 | Validação SHAP base_value | ⏳ BLOQUEADO (requer notebook) | — |
+| 2.3 | Renomear taxa_sla_violado_pct | ⏳ PENDENTE | — |
+| 3 | Camada dados/API (campos novos nos 6 endpoints) | ⏳ EM PROGRESSO | — |
 | 4 | Nova arquitetura visual (6 telas redesenhadas) | ⬜ | — |
 | 5 | Integração (religar as 6 telas às APIs) | ⬜ | — |
 | 6 | QA técnico (testes de contrato, validação SHAP) | ⬜ | — |
