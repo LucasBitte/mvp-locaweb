@@ -27,4 +27,21 @@ mlflow.db
 # Editor / SO
 .vscode/
 .idea/
+.venv*/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
+airflow/logs/
+cloud/evidence/
+.ruff_cache/
+infra/.artifacts/
+infra/backend.hcl
+pytest-cache-files-*/
 .DS_Store

@@ -1,0 +1,15 @@
+services:
+  mlflow:
+    build:
+      context: ..
+      dockerfile: cloud/mlflow.Dockerfile
+    environment:
+      AWS_DEFAULT_REGION: sa-east-1
+      AWS_PROFILE: ${AWS_PROFILE:-locaweb-mlflow}
+      MLFLOW_DB_SECRET_ID: ${MLFLOW_DB_SECRET_ID:?segredo do database mlflow}
+      LAKE_BUCKET: ${LAKE_BUCKET:?bucket de artefatos}
+      MLFLOW_ALLOWED_HOSTS: ${MLFLOW_ALLOWED_HOSTS:-localhost:5000,127.0.0.1:5000}
+    volumes:
+      - ${AWS_CONFIG_DIR:?diretorio perfil AWS}:/root/.aws:ro
+    ports: ['127.0.0.1:5000:5000']
+    restart: unless-stopped

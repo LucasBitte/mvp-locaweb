@@ -1,0 +1,53 @@
+x-airflow: &airflow
+  build:
+    context: ..
+    dockerfile: airflow/Dockerfile
+  environment: &environment
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD:?defina senha}@metadata/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:?defina Fernet}
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEB_SECRET:?defina segredo}
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    FIAP_DB_SECRET_ID: ${FIAP_DB_SECRET_ID:?segredo SQL pipeline}
+    AWS_DEFAULT_REGION: sa-east-1
+    AWS_PROFILE: ${AWS_PROFILE:-locaweb-airflow}
+    MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:?URL MLflow}
+    GLUE_JOB_NAME: locaweb-rds-to-s3
+    PYTHONPATH: /opt/project
+  volumes:
+    - ../:/opt/project
+    - ./dags:/opt/airflow/dags:ro
+    - ./logs:/opt/airflow/logs
+    - ${AWS_CONFIG_DIR:?diretorio perfil AWS}:/home/airflow/.aws:ro
+  depends_on:
+    metadata:
+      condition: service_healthy
+  restart: unless-stopped
+services:
+  metadata:
+    image: postgres:16.6
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD:?defina senha}
+      POSTGRES_DB: airflow
+    volumes: [metadata:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U airflow']
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+  init:
+    <<: *airflow
+    command: db migrate
+    restart: 'no'
+    profiles: [setup]
+  scheduler:
+    <<: *airflow
+    command: scheduler
+  webserver:
+    <<: *airflow
+    command: webserver
+    ports: ['127.0.0.1:8080:8080']
+volumes:
+  metadata:

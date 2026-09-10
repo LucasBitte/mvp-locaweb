@@ -1,0 +1,50 @@
+name: Terraform
+on:
+  pull_request:
+    paths: ['infra/**', 'cloud/**', '.github/workflows/terraform.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+      - run: >-
+          python -m pip download --no-deps --only-binary=:all: python-dotenv==1.0.1 -d infra/.artifacts
+      - run: terraform -chdir=infra fmt -check -recursive
+      - run: terraform -chdir=infra init -backend=false -input=false
+      - run: terraform -chdir=infra validate
+  plan:
+    needs: validate
+    if: vars.AWS_PLAN_ROLE_ARN != '' && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository)
+    environment: cloud-plan
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: 'true'
+      TF_VAR_vps_cidrs: ${{ vars.VPS_CIDRS_JSON }}
+      TF_VAR_lake_bucket: ${{ vars.LAKE_BUCKET }}
+      TF_VAR_budget_email: ${{ vars.BUDGET_EMAIL }}
+      TF_VAR_glue_reader_secret_arn: ${{ vars.GLUE_READER_SECRET_ARN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: sa-east-1
+          allowed-account-ids: '259081046223'
+      - run: >-
+          python -m pip download --no-deps --only-binary=:all: python-dotenv==1.0.1 -d infra/.artifacts
+      - run: terraform -chdir=infra init -input=false -backend-config="bucket=$STATE_BUCKET" -backend-config="key=locaweb/terraform.tfstate" -backend-config="region=sa-east-1" -backend-config="dynamodb_table=locaweb-terraform-lock" -backend-config="encrypt=true" -backend-config="use_lockfile=true"
+        env:
+          STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      - run: terraform -chdir=infra plan -input=false -no-color

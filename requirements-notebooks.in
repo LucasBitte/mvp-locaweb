@@ -1,0 +1,16 @@
+-r requirements.in
+jupyter
+nbconvert
+ipykernel==7.2.0
+matplotlib==3.10.8
+seaborn==0.13.2
+plotly==5.24.1
+missingno
+holidays==0.95
+pyarrow==21.0.0
+prophet==1.4.0
+scikit-learn==1.5.2
+xgboost==3.2.0
+shap==0.51.0
+mlflow==3.10.0
+joblib==1.5.2

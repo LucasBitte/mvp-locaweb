@@ -1,0 +1,71 @@
+version: 2
+exposures:
+- name: dashboard_alertas
+  type: dashboard
+  description: 'Tela alertas: React servido pela API existente.'
+  owner:
+    name: Equipe FIAP Locaweb
+  depends_on:
+  - source('dw', 'dim_grupo')
+  - source('dw', 'fct_recorrencia_operacional')
+  - source('ml', 'dim_cluster')
+  - source('ml', 'fct_perfil_cluster')
+  - source('ml', 'fct_pressao_equipe')
+  - source('ml', 'fct_previsao_categoria')
+  - source('ml', 'fct_previsao_diaria_total')
+  - source('ml', 'ml_forecast_dataset')
+- name: dashboard_clusters
+  type: dashboard
+  description: 'Tela clusters: React servido pela API existente.'
+  owner:
+    name: Equipe FIAP Locaweb
+  depends_on:
+  - source('dw', 'fct_incidentes')
+  - source('ml', 'dim_cluster')
+  - source('ml', 'fct_perfil_cluster')
+- name: dashboard_detalhe
+  type: dashboard
+  description: 'Tela detalhe: React servido pela API existente.'
+  owner:
+    name: Equipe FIAP Locaweb
+  depends_on:
+  - source('dw', 'dim_prioridade')
+  - source('dw', 'fct_recorrencia_operacional')
+  - source('ml', 'fct_previsao_categoria')
+  - source('ml', 'fct_previsao_prioridade')
+  - source('ml', 'fct_previsao_produto')
+- name: dashboard_fatores
+  type: dashboard
+  description: 'Tela fatores: React servido pela API existente.'
+  owner:
+    name: Equipe FIAP Locaweb
+  depends_on:
+  - source('dw', 'dim_produto_categoria')
+  - source('dw', 'dim_tempo')
+  - source('dw', 'fct_incidentes')
+  - source('ml', 'fct_importancia_conceito')
+  - source('ml', 'fct_importancia_feature')
+  - source('ml', 'fct_shap_incidente')
+- name: dashboard_kpi
+  type: dashboard
+  description: 'Tela kpi: React servido pela API existente.'
+  owner:
+    name: Equipe FIAP Locaweb
+  depends_on:
+  - source('dw', 'dim_prioridade')
+  - source('dw', 'dim_tempo')
+  - source('dw', 'fct_incidentes')
+  - source('dw', 'ref_meta_sla_anual')
+- name: dashboard_painel
+  type: dashboard
+  description: 'Tela painel: React servido pela API existente.'
+  owner:
+    name: Equipe FIAP Locaweb
+  depends_on:
+  - source('dw', 'dim_grupo')
+  - source('dw', 'dim_prioridade')
+  - source('dw', 'fct_incidentes')
+  - source('ml', 'fct_pressao_equipe')
+  - source('ml', 'fct_previsao_diaria_total')
+  - source('ml', 'fct_previsao_prioridade')
+  - source('ml', 'ml_forecast_dataset')

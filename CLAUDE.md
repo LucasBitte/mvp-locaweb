@@ -173,6 +173,11 @@ mvp-locaweb/
 
 ## 9. Status por etapa (fonte de verdade — atualizar aqui, não em conversa)
 
+Cloud (branch `abner`, 10/09/2026): implementação aditiva em `cloud/`,
+`infra/`, `airflow/`, `dbt/` e `.github/workflows/`. Deploy/carga/cutover
+ainda pendentes de acesso AWS/VPS e evidência; ver `cloud/README.md`.
+Não marcar o plano cloud concluído apenas pela presença desses arquivos.
+
 | Etapa | O quê | Status |
 |---|---|---|
 | 0-1 | Setup do repo + inspeção do schema bruto | ✅ |

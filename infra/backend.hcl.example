@@ -1,0 +1,6 @@
+bucket         = "PREENCHER-state"
+key            = "locaweb/terraform.tfstate"
+region         = "sa-east-1"
+dynamodb_table = "locaweb-terraform-lock"
+encrypt        = true
+use_lockfile   = true

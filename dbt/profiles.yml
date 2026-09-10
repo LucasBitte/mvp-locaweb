@@ -1,0 +1,13 @@
+locaweb:
+  target: default
+  outputs:
+    default:
+      type: postgres
+      host: "{{ env_var('FIAP_DB_HOST') }}"
+      port: "{{ env_var('FIAP_DB_PORT', '5432') | int }}"
+      user: "{{ env_var('DBT_DB_USER', env_var('FIAP_DB_USER')) }}"
+      password: "{{ env_var('DBT_DB_PASSWORD', env_var('FIAP_DB_PASSWORD')) }}"
+      dbname: "{{ env_var('FIAP_DB_NAME', 'fiap') }}"
+      schema: dw
+      sslmode: "{{ env_var('PGSSLMODE', 'require') }}"
+      threads: 2

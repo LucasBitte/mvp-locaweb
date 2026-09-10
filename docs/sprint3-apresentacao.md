@@ -33,6 +33,10 @@ antes do problema virar impacto operacional:
 **Dado de origem**: `public.incidentes`, 122.543 chamados (2023-2025),
 extraídos para o Postgres `fiap` (VPS próprio do projeto — sem dependência
 de infraestrutura legada AWS/dbt/RDS, removida no início da Sprint 2).
+A evolução cloud na Sprint 4 é aditiva: o Postgres continua origem, S3 vira
+destino, dbt valida tabelas existentes e o React permanece o BI alvo. Isso
+não restaura os caminhos de ingestão legados removidos nos PRs #24/#26.
+Implementação e pendências de execução: `cloud/README.md`.
 Corte para esforço operacional real (`status <> 'Sem Intervenção'`,
 `aberto >= 2025-01-01`) resulta em **41.441 incidentes** — a população que
 todo o resto do projeto usa. Ver `docs/dicionario-dados.md` e

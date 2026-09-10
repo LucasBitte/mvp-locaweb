@@ -1,0 +1,12 @@
+# Override aditivo ao compose de produção. Aplicar somente após dual-run.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: cloud/api.Dockerfile
+    environment:
+      FIAP_DB_SECRET_ID: ${FIAP_DB_SECRET_ID:?segredo SQL somente leitura da API}
+      AWS_DEFAULT_REGION: sa-east-1
+      AWS_PROFILE: ${AWS_PROFILE:-locaweb-api}
+    volumes:
+      - ${AWS_CONFIG_DIR:?diretorio perfil AWS}:/root/.aws:ro

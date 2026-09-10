@@ -1,0 +1,234 @@
+version: 2
+sources:
+- name: dw
+  schema: dw
+  tables:
+  - name: dim_produto_categoria
+    description: Tabela existente dw.dim_produto_categoria; propriedade do pipeline
+      SQL/notebooks.
+    columns:
+    - name: dim_produto_categoria_sk
+      tests:
+      - not_null
+      - unique
+  - name: dim_grupo
+    description: Tabela existente dw.dim_grupo; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: dim_grupo_sk
+      tests:
+      - not_null
+      - unique
+  - name: dim_tempo
+    description: Tabela existente dw.dim_tempo; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: dim_tempo_sk
+      tests:
+      - not_null
+      - unique
+  - name: dim_status
+    description: Tabela existente dw.dim_status; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: dim_status_sk
+      tests:
+      - not_null
+      - unique
+  - name: dim_prioridade
+    description: Tabela existente dw.dim_prioridade; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: dim_prioridade_sk
+      tests:
+      - not_null
+      - unique
+  - name: dim_abertura
+    description: Tabela existente dw.dim_abertura; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: dim_abertura_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_incidentes
+    description: Tabela existente dw.fct_incidentes; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: incident_sk
+      tests:
+      - not_null
+      - unique
+    - name: incident_id
+      tests:
+      - not_null
+      - unique
+    - name: dim_produto_categoria_sk
+      tests:
+      - not_null
+      - relationships:
+          to: source('dw', 'dim_produto_categoria')
+          field: dim_produto_categoria_sk
+    - name: dim_grupo_sk
+      tests:
+      - not_null
+      - relationships:
+          to: source('dw', 'dim_grupo')
+          field: dim_grupo_sk
+    - name: dim_tempo_sk
+      tests:
+      - not_null
+      - relationships:
+          to: source('dw', 'dim_tempo')
+          field: dim_tempo_sk
+    - name: dim_status_sk
+      tests:
+      - not_null
+      - relationships:
+          to: source('dw', 'dim_status')
+          field: dim_status_sk
+    - name: dim_prioridade_sk
+      tests:
+      - not_null
+      - relationships:
+          to: source('dw', 'dim_prioridade')
+          field: dim_prioridade_sk
+    - name: dim_abertura_sk
+      tests:
+      - not_null
+      - relationships:
+          to: source('dw', 'dim_abertura')
+          field: dim_abertura_sk
+  - name: ref_meta_sla_anual
+    description: Tabela existente dw.ref_meta_sla_anual; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: ref_meta_sla_anual_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_recorrencia_operacional
+    description: Tabela existente dw.fct_recorrencia_operacional; propriedade do pipeline
+      SQL/notebooks.
+    columns:
+    - name: recorrencia_sk
+      tests:
+      - not_null
+      - unique
+- name: ml
+  schema: ml
+  tables:
+  - name: ml_base_features
+    description: Tabela existente ml.ml_base_features; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: incident_id
+      tests:
+      - not_null
+      - unique
+  - name: ml_cluster_dataset
+    description: Tabela existente ml.ml_cluster_dataset; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: incident_id
+      tests:
+      - not_null
+      - unique
+  - name: ml_sla_classification_dataset
+    description: Tabela existente ml.ml_sla_classification_dataset; propriedade do
+      pipeline SQL/notebooks.
+    columns:
+    - name: incident_id
+      tests:
+      - not_null
+      - unique
+  - name: ml_forecast_dataset
+    description: Tabela existente ml.ml_forecast_dataset; propriedade do pipeline
+      SQL/notebooks.
+    columns:
+    - name: data_abertura
+      tests:
+      - not_null
+      - unique
+  - name: fct_previsao_diaria_total
+    description: Tabela existente ml.fct_previsao_diaria_total; propriedade do pipeline
+      SQL/notebooks.
+    columns:
+    - name: previsao_total_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_previsao_prioridade
+    description: Tabela existente ml.fct_previsao_prioridade; propriedade do pipeline
+      SQL/notebooks.
+    columns:
+    - name: previsao_prioridade_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_previsao_categoria
+    description: Tabela existente ml.fct_previsao_categoria; propriedade do pipeline
+      SQL/notebooks.
+    columns:
+    - name: previsao_categoria_sk
+      tests:
+      - not_null
+      - unique
+  - name: dim_cluster
+    description: Tabela existente ml.dim_cluster; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: cluster_id
+      tests:
+      - not_null
+      - unique
+  - name: fct_perfil_cluster
+    description: Tabela existente ml.fct_perfil_cluster; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: perfil_cluster_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_importancia_feature
+    description: Tabela existente ml.fct_importancia_feature; propriedade do pipeline
+      SQL/notebooks.
+    columns:
+    - name: importancia_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_risco_incidente
+    description: Tabela existente ml.fct_risco_incidente; propriedade do pipeline
+      SQL/notebooks.
+    columns:
+    - name: incident_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_shap_incidente
+    description: Tabela existente ml.fct_shap_incidente; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: shap_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_importancia_conceito
+    description: Tabela existente ml.fct_importancia_conceito; propriedade do pipeline
+      SQL/notebooks.
+    columns:
+    - name: importancia_conceito_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_previsao_grupo
+    description: Tabela existente ml.fct_previsao_grupo; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: previsao_grupo_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_pressao_equipe
+    description: Tabela existente ml.fct_pressao_equipe; propriedade do pipeline SQL/notebooks.
+    columns:
+    - name: pressao_equipe_sk
+      tests:
+      - not_null
+      - unique
+  - name: fct_previsao_produto
+    description: Tabela existente ml.fct_previsao_produto; propriedade do pipeline
+      SQL/notebooks.
+    columns:
+    - name: previsao_produto_sk
+      tests:
+      - not_null
+      - unique

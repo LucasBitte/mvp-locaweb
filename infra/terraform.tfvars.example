@@ -1,0 +1,5 @@
+vps_cidrs              = ["203.0.113.10/32"] # substituir pelo IP real
+lake_bucket            = "PREENCHER-locaweb-lake"
+budget_email           = "PREENCHER@example.com"
+glue_reader_secret_arn = "arn:aws:secretsmanager:sa-east-1:123456789012:secret:locaweb-reader-PREENCHER"
+monthly_budget_usd     = 15

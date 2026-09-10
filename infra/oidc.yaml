@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: OIDC GitHub para plan (sem apply nem leitura de senhas).
+Parameters:
+  StateBucketName: {Type: String}
+  LakeBucketName: {Type: String}
+  GitHubProviderArn:
+    Type: String
+    Description: ARN do provider token.actions.githubusercontent.com da conta.
+Resources:
+  PlanRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: locaweb-github-plan
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: {Federated: !Ref GitHubProviderArn}
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: repo:LucasBitte/mvp-locaweb:environment:cloud-plan
+      Policies:
+        - PolicyName: terraform-read-and-lock
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:Describe*
+                  - rds:Describe*
+                  - rds:ListTagsForResource
+                  - glue:GetJob
+                  - glue:GetConnection
+                  - glue:GetDatabase
+                  - glue:GetCrawler
+                  - glue:GetTags
+                  - budgets:ViewBudget
+                  - iam:GetRole
+                  - iam:GetRolePolicy
+                  - iam:ListRolePolicies
+                  - iam:ListAttachedRolePolicies
+                  - iam:GetPolicy
+                  - iam:GetPolicyVersion
+                  - secretsmanager:DescribeSecret
+                  - logs:DescribeLogGroups
+                Resource: '*'
+              - Effect: Allow
+                Action: [s3:GetBucket*, s3:ListBucket, s3:GetEncryptionConfiguration, s3:GetLifecycleConfiguration]
+                Resource:
+                  - !Sub 'arn:aws:s3:::${StateBucketName}'
+                  - !Sub 'arn:aws:s3:::${LakeBucketName}'
+              - Effect: Allow
+                Action: [s3:GetObject]
+                Resource:
+                  - !Sub 'arn:aws:s3:::${StateBucketName}/locaweb/*'
+                  - !Sub 'arn:aws:s3:::${LakeBucketName}/jobs/*'
+              - Effect: Allow
+                Action: [s3:PutObject, s3:DeleteObject]
+                Resource: !Sub 'arn:aws:s3:::${StateBucketName}/locaweb/terraform.tfstate.tflock'
+              - Effect: Allow
+                Action: [dynamodb:DescribeTable, dynamodb:GetItem, dynamodb:PutItem, dynamodb:DeleteItem]
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/locaweb-terraform-lock'
+Outputs:
+  PlanRoleArn: {Value: !GetAtt PlanRole.Arn}
