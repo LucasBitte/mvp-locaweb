@@ -1,0 +1,2 @@
+# A CLI oficial depende de azure-batch prerelease. Usar uv --prerelease=allow.
+azure-cli==2.90.0

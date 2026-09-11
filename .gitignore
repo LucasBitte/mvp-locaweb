@@ -45,3 +45,6 @@ infra/.artifacts/
 infra/backend.hcl
 pytest-cache-files-*/
 .DS_Store
+cloud/azure/config.local.json
+cloud/azure/build/
+.azure/

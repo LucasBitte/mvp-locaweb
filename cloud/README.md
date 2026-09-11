@@ -194,11 +194,14 @@ ainda precisa de uma execução real validada, não há números fabricados.
 
 Azure é promoção explícita, fora do DAG de treino:
 
+Procedimento completo, configuração da assinatura, Bicep e verificação de
+upload/download: [`azure/README.md`](azure/README.md).
+
 ```sh
 az login
 az extension add --name ml
 python -m cloud.register_azure --run-id RUN --artifact-path model/bundle.pkl \
-  --registry-name REGISTRY --name risco-sla --version 1
+  --subscription SUBSCRIPTION-ID --registry-name REGISTRY --name risco-sla --version 1
 ```
 
 Artefato custom_model, sem executor/compute Azure e sem upload do dataset.

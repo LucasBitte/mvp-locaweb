@@ -1,0 +1,23 @@
+name: Azure validation
+on:
+  pull_request:
+    paths: ['cloud/azure/**', 'cloud/register_azure.py', 'tests/test_azure.py', '.github/workflows/azure.yml']
+  push:
+    branches: [abner, develop, main]
+    paths: ['cloud/azure/**', 'cloud/register_azure.py', 'tests/test_azure.py', '.github/workflows/azure.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install pytest==9.0.3 ruff==0.15.12
+      - run: python -m ruff check cloud/azure cloud/register_azure.py tests/test_azure.py
+      - run: python -m pytest tests/test_azure.py -q
+      - run: az bicep install --version v0.47.16
+      - run: az bicep build --file cloud/azure/main.bicep --outdir cloud/azure/build

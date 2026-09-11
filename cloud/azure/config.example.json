@@ -1,0 +1,11 @@
+{
+  "subscription_id": "PREENCHER-ID-DA-ASSINATURA",
+  "tenant_id": "PREENCHER-ID-DO-TENANT",
+  "resource_group": "rg-locaweb-ml",
+  "registry_name": "PREENCHER-NOME-UNICO",
+  "location": "eastus",
+  "alert_email": "PREENCHER@example.com",
+  "monthly_budget": 10,
+  "budget_start": "2026-09-01T00:00:00Z",
+  "budget_end": "2026-12-01T00:00:00Z"
+}
