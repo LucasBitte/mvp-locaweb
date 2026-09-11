@@ -99,6 +99,7 @@ def main():
     if args.action == 'register-providers':
         for namespace, status in report['providers'].items():
             if status != 'Registered':
+                print(f'Registrando {namespace}...', flush=True)
                 run(['provider', 'register', '--namespace', namespace, '--subscription', sub, '--wait'], as_json=False)
         return
     if args.action in ('plan', 'apply'):
@@ -110,7 +111,8 @@ def main():
         result = run(['deployment', 'sub', 'what-if' if args.action == 'plan' else 'create',
                       '--subscription', sub, '--location', config['location'],
                       '--name', 'locaweb-azure-registry', '--template-file', str(DIRECTORY / 'main.bicep'),
-                      '--parameters', '@' + str(path)], as_json=True)
+                      '--parameters', '@' + str(path)] +
+                     (['--no-pretty-print'] if args.action == 'plan' else []), as_json=True)
     else:
         result = verify(config)
     output = evidence / (args.action + '.json')
