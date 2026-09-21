@@ -68,7 +68,9 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
             <span style={{ font: "600 30px/1 'JetBrains Mono',monospace", color: '#D64545' }}>
               {shap.score !== null ? shap.score.toFixed(2).replace('.', ',') : '—'}
             </span>
-            <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>score_calibrado · risco de violação de OLA</span>
+            <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
+              score_calibrado · risco de exceder o tempo esperado da prioridade
+            </span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr 56px', gap: 12, marginBottom: 8 }}>
             <span />
