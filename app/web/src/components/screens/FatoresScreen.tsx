@@ -2,7 +2,7 @@ import { Fragment } from 'react'
 import { getFatores } from '../../lib/api'
 import { useApi } from '../../lib/useApi'
 import { computeHeatmap, computeImportanciaFeatures, computeShapExplicacao } from '../../data/dashboardData'
-import { MUTED, NAVY, SUB } from '../../lib/theme'
+import { GREEN, MUTED, NAVY, RED, SUB } from '../../lib/theme'
 import { SourceTag } from '../SourceTag'
 import { ErrorState, Loading } from '../ApiStatus'
 
@@ -32,6 +32,7 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={cardTitle}>Importância dos fatores</span>
+              <span style={cardSub}>O que mais pesa no risco somando todos os incidentes avaliados</span>
               <span style={cardSub}>
                 Valores de <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>{fonteImportancia}</span>
               </span>
@@ -55,6 +56,7 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={cardTitle}>Por que este incidente tem risco elevado</span>
+              <span style={cardSub}>Cada barra é um fator; vermelho empurra o risco para cima, verde puxa para baixo</span>
               <span style={cardSub}>
                 SHAP para <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>{shap.incidentId ?? '—'}</span> — um dos 30
                 incidentes de maior risco individual
@@ -68,6 +70,18 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
             </span>
             <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>score_calibrado · risco de violação de OLA</span>
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr 56px', gap: 12, marginBottom: 8 }}>
+            <span />
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ font: '600 10px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em', color: GREEN }}>
+                ← reduz o risco
+              </span>
+              <span style={{ font: '600 10px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em', color: RED }}>
+                aumenta o risco →
+              </span>
+            </div>
+            <span />
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {shap.rows.map((s) => (
               <div key={s.name} style={{ display: 'grid', gridTemplateColumns: '170px 1fr 56px', alignItems: 'center', gap: 12 }}>
@@ -79,6 +93,16 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
                 <span style={{ font: "500 12px/1 'JetBrains Mono',monospace", textAlign: 'right', color: s.fill }}>{s.v}</span>
               </div>
             ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginTop: 16 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: RED }} />
+              <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: MUTED }}>aumenta o risco</span>
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: GREEN }} />
+              <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: MUTED }}>reduz o risco</span>
+            </span>
           </div>
           <p style={{ margin: '18px 0 0', font: '400 12px/1.55 Inter,sans-serif', color: MUTED }}>
             Esta explicação é do classificador de risco por incidente. A previsão de volume do dia seguinte vem do Prophet, que não produz valores SHAP.
@@ -130,10 +154,11 @@ export function FatoresScreen({ mostrarOrigem }: FatoresScreenProps) {
           ))}
         </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 18 }}>
           <span style={{ font: '600 10px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em', color: SUB }}>Menor</span>
           <div style={{ flex: '0 0 220px', height: 8, borderRadius: 4, background: 'linear-gradient(90deg,#F0F3FF,#1E6FD9)' }} />
           <span style={{ font: '600 10px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em', color: SUB }}>Maior</span>
+          <span style={cardSub}>Cor = volume médio de incidentes abertos naquele dia</span>
         </div>
       </div>
     </section>

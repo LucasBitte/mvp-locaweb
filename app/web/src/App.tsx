@@ -5,7 +5,8 @@ import { DetalheScreen } from './components/screens/DetalheScreen'
 import { FatoresScreen } from './components/screens/FatoresScreen'
 import { KpiScreen } from './components/screens/KpiScreen'
 import { PainelScreen } from './components/screens/PainelScreen'
-import { Header } from './components/Header'
+import { Header, TABS } from './components/Header'
+import { ScreenQuestion } from './components/ScreenQuestion'
 import { BG } from './lib/theme'
 
 // Limiar de pressão crítica por equipe (PLAN.md Fase 3, ml.fct_pressao_equipe.nivel_pressao).
@@ -22,6 +23,7 @@ function App() {
       <Header activeTab={tab} onSelectTab={setTab} />
       <main className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-10 pt-8">
         <div key={tab} className="animate-[fadeIn_260ms_cubic-bezier(.2,0,0,1)]">
+          <ScreenQuestion pergunta={TABS[tab].pergunta} />
           {tab === 0 && <PainelScreen mostrarOrigem={MOSTRAR_ORIGEM} limiarCritico={LIMIAR_CRITICO_PCT} />}
           {tab === 1 && <DetalheScreen mostrarOrigem={MOSTRAR_ORIGEM} />}
           {tab === 2 && <KpiScreen mostrarOrigem={MOSTRAR_ORIGEM} />}

@@ -23,6 +23,16 @@ export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
 
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Os quatro perfis operacionais</span>
+          <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
+            Perfis que o K-Means encontrou nos 41.441 incidentes de 2025
+          </span>
+        </div>
+        <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO · K-MEANS</SourceTag>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: 20 }}>
         {clusters.map((c) => (
           <div key={c.id} className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: 22, boxShadow: '0 4px 16px rgba(10,22,40,.03)', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -75,6 +85,9 @@ export function ClustersScreen({ mostrarOrigem }: ClustersScreenProps) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Perfis operacionais — duração × tempo excedido × volume</span>
+            <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
+              Cada bolha é um perfil; o tamanho é a fatia do volume total
+            </span>
             <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
               Eixo X duração média (h) · eixo Y % excedeu tempo esperado da prioridade · área da bolha = % do volume total
             </span>

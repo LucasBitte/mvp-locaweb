@@ -47,6 +47,7 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
           <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>
             {resumo.diasRestantes} dias restantes · âncora temporal do pipeline, não a data real
           </span>
+          <SourceTag variant="calculado" visible={mostrarOrigem}>CALCULADO · CALENDÁRIO</SourceTag>
         </div>
 
         <div className={cardClass} style={cardStyle}>
@@ -56,6 +57,9 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
             <span style={{ font: '500 13px/1 Inter,sans-serif', color: SUB }}>P2 + P3</span>
           </div>
           <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>{resumo.quebrasPorPrioridade}</span>
+          <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>
+            OLA — o acordo interno de tempo de atendimento
+          </span>
           <SourceTag variant="historico" visible={mostrarOrigem}>HISTÓRICO · DW · kpi_status_int</SourceTag>
         </div>
 
@@ -80,6 +84,9 @@ export function KpiScreen({ mostrarOrigem }: KpiScreenProps) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={cardTitle}>Meta anual por prioridade × indicador</span>
+            <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
+              Cada linha é uma meta; a célula destacada mostra em que faixa estamos hoje
+            </span>
             <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
               Seis faixas contíguas de <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>ref_meta_sla_anual</span> — só existe
               meta para P2/P3, <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>pct_atingimento</span> 150/125/100/75/50/0%

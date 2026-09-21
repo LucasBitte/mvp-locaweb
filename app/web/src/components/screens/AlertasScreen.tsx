@@ -23,9 +23,12 @@ export function AlertasScreen({ mostrarOrigem }: AlertasScreenProps) {
   return (
     <section className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr]" style={{ gap: 20, alignItems: 'start' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Alertas ativos</span>
-          <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>Cada alerta é disparado por uma regra explícita, com origem visível</span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ font: '600 20px/1.2 Manrope,sans-serif', color: NAVY }}>Alertas ativos</span>
+            <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>Cada alerta é disparado por uma regra explícita, com origem visível</span>
+          </div>
+          <SourceTag variant="regra" visible={mostrarOrigem}>REGRA · MOTOR DE ALERTAS</SourceTag>
         </div>
         {alerts.map((a, i) => (
           <div key={`${a.rule}-${i}`} className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '22px 24px', boxShadow: '0 4px 16px rgba(10,22,40,.03)', display: 'flex', flexDirection: 'column', gap: 12 }}>
