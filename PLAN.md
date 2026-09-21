@@ -1,9 +1,9 @@
 # PLAN — Fechamento de Lacunas do Desafio AIOps
 
-> Este plano é aditivo ao que já está decidido em `CLAUDE.md`,
-> `docs/dicionario-dados.md`, `docs/modelo-dimensional.md`,
+> Este plano é aditivo ao que já está decidido em
+> `docs/resumo-projeto.md`, `docs/dicionario-dados.md`, `docs/modelo-dimensional.md`,
 > `docs/forecast-por-equipe.md`, `docs/prds/etapa5-api.md`,
-> `docs/schema-e-cobertura-mockup.md` e `docs/resumo-projeto.md` — esse corpo
+> `docs/schema-e-cobertura-mockup.md` — esse corpo
 > de documentação já mergeada é a fonte de verdade funcional (escopo, 6 telas,
 > P2/P3, forecast por equipe, KPI/OLA, SHAP, Clusters, EDA, métricas, FastAPI,
 > React). Nenhuma decisão registrada nesses documentos é removida, substituída
@@ -11,7 +11,7 @@
 > um complemento técnico — não redefine produto, telas ou regras de negócio.
 >
 > Ordem de precedência em caso de conflito: (1) migrations/código/documentação
-> já mergeados, (2) `CLAUDE.md`, (3) este plano funcional, (4) Anexo A
+> já mergeados, (2) documentação de contexto do projeto, (3) este plano funcional, (4) Anexo A
 > (Agent Skills), (5) mockups/documentos históricos.
 
 ## 1. Objetivo
@@ -85,8 +85,8 @@ staging.incidentes_silver      (silver — 41.441 linhas, pós-2025)
 ## 4. Matriz obrigatória das 6 telas
 
 Nomes técnicos canônicos = os já usados no mockup mergeado
-(`docs/design/aiops_dashboard_redesign.html`, nav `go(0)..go(5)`) e em
-`CLAUDE.md` §1/§9. Entre parênteses, o rótulo de apresentação/storytelling
+(`docs/design/aiops_dashboard_redesign.html`, nav `go(0)..go(5)`) e no
+status por etapa do projeto. Entre parênteses, o rótulo de apresentação/storytelling
 (Sprint 3) — **não** é uma renomeação da tela, é só um nome mais descritivo
 para a narrativa final; nenhum artefato mergeado usa esses nomes hoje.
 
@@ -456,7 +456,7 @@ sem que isso renomeie a tela tecnicamente.
 ## Anexo A — Governança e Qualidade de ML via Agent Skills
 
 Complemento técnico de QA/diagnóstico/reprodutibilidade/governança. **Não
-redefine** nenhuma decisão funcional das Fases 1-16 ou de `CLAUDE.md`. Os
+redefine** nenhuma decisão funcional das Fases 1-16 já documentadas. Os
 achados abaixo foram **verificados por leitura direta do código** nesta
 auditoria (não apenas repetidos do texto genérico dos `SKILL.md`, que são
 guias de referência não específicos deste projeto).
@@ -469,8 +469,8 @@ guias de referência não específicos deste projeto).
   têm nenhum pin de versão (`fastapi`, `pandas`, `prophet`, `scikit-learn`,
   `xgboost`, `shap` etc. — todos sem `==`). Ação: diagnosticar o ambiente
   atual (`pip freeze` no `venv/` existente) e propor pin — **checkpoint
-  humano antes de alterar `requirements*.txt`** (regra já existente em
-  `CLAUDE.md` §8, reforçada aqui).
+  humano antes de alterar `requirements*.txt`** (regra já existente na
+  documentação de convenções do projeto, reforçada aqui).
 - Observação a documentar: Prophet/cmdstanpy pode não ser 100% determinístico
   mesmo com seed fixo — limitação conhecida da biblioteca, não bug do
   projeto.
@@ -616,8 +616,9 @@ técnica e na Sprint 3 (Fase 16), nunca na tela KPI do dashboard.
 
 ## Critérios finais de aceite
 
-- [ ] `CLAUDE.md` preservado em todas as seções não relacionadas às lacunas
-      (1, 2, 3, 5, 6, 7, 8, 10, 12) — só seções 4/9/11 ganharam adições.
+- [ ] Documentação de contexto do projeto preservada em todas as seções não
+      relacionadas às lacunas (1, 2, 3, 5, 6, 7, 8, 10, 12) — só seções
+      4/9/11 ganharam adições.
 - [ ] 6 telas explícitas na seção 4 deste plano, cada uma com fase própria
       (Fases 6-11).
 - [ ] Tela Clusters/Perfis Operacionais explicitamente obrigatória (Fase 10),
@@ -636,5 +637,5 @@ técnica e na Sprint 3 (Fase 16), nunca na tela KPI do dashboard.
       dependências) tratados como checkpoint humano, nunca retreino
       automático (Anexo A, checkpoints ML-1 a ML-5).
 - [ ] Nenhuma alteração de modelo, migration, notebook, `.env` ou
-      `requirements*.txt` nesta tarefa — só `CLAUDE.md` e `PLAN.md`.
+      `requirements*.txt` nesta tarefa — só documentação de contexto e `PLAN.md`.
 - [ ] Nenhum retreino, merge ou push realizado.

@@ -7,7 +7,7 @@
  (share_historico de "produto" sobre ml.ml_base_features) aplicado sobre o
  yhat ja persistido em ml.fct_previsao_diaria_total. NAO e um Prophet por
  corte — mesma ressalva de metodologia ja registrada para categoria/
- prioridade em CLAUDE.md.
+ prioridade.
 
  O recorte de regime (`inicio`) usado no share e o mesmo que
  notebooks/forecast_incidentes_revisado.py usaria na mesma execucao (deteccao

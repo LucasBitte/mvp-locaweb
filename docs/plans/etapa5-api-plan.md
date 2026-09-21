@@ -1,6 +1,6 @@
 # Plano — Etapa 5: API FastAPI (6 endpoints)
 
-> Base: `docs/prds/etapa5-api.md` (aprovado) + `CLAUDE.md`. Plano de implementação — não
+> Base: `docs/prds/etapa5-api.md` (aprovado). Plano de implementação — não
 > contém código ainda; cada etapa abaixo vira um commit revisável na branch
 > `feature/etapa5-api`.
 
@@ -8,7 +8,7 @@
 
 `app/api/` hoje só tem `GET /health` (`app/api/main.py`). O PRD da Etapa 5
 (`docs/prds/etapa5-api.md`) já decidiu, endpoint a endpoint, o contrato de resposta das
-6 telas do mockup, incluindo dois pontos sensíveis documentados no `CLAUDE.md` §4/§8:
+6 telas do mockup, incluindo dois pontos sensíveis já documentados no projeto:
 
 - o forecast por prioridade/categoria é proporção histórica, não modelo por corte —
   precisa do campo `metodologia`/`share_historico` em cada item, sempre;
@@ -39,13 +39,13 @@ Confirmado por exploração de `etl/db.py`, `etl/transform.py`, `tests/test_api.
   routers de Painel/Detalhe/Clusters chamando-as diretamente (elas continuam funções
   Python normais por trás do decorator `@router.get`) — não duplica SQL.
 - **Testes**: `tests/test_api_<tela>.py`, `TestClient` contra a app real, mesmo padrão de
-  `tests/test_api.py` hoje. Não há banco de teste separado (confirmado no `CLAUDE.md` §8) —
+  `tests/test_api.py` hoje. Não há banco de teste separado (decisão já confirmada) —
   os testes leem o banco `fiap` real (somente `SELECT`, nunca escrita), igual ao que a API
   fará em produção. Cada teste valida **contrato/estrutura** (campos presentes, tipos,
   invariantes tipo "soma de pct_volume ≈ 100"), não valores exatos que mudam a cada
   execução dos modelos.
 - **Branch**: `feature/etapa5-api`, commits sequenciais nela: um por etapa abaixo. PR único
-  ao final (Etapa 8), squash-merge — convenção já registrada no `CLAUDE.md` §6.
+  ao final (Etapa 8), squash-merge — convenção já registrada nas diretrizes do projeto.
 
 ## Etapas
 
@@ -82,8 +82,8 @@ antes do primeiro push).
 
 **Por quê checkpoint**: esta migration grava os números de meta de OLA (31 quebras/ano
 P2, 201/ano P3) que todo o resto da Etapa 5 vai expor como placeholder — é a primeira vez
-que esse dado placeholder passa a existir formalmente no banco. `CLAUDE.md` §8 proíbe
-apresentar esses números como reais sem confirmação explícita; requer revisão dos
+que esse dado placeholder passa a existir formalmente no banco. As diretrizes do
+projeto proíbem apresentar esses números como reais sem confirmação explícita; requer revisão dos
 valores e do `fonte='placeholder_mockup'` antes de aplicar no banco `fiap` real (não há
 banco de teste separado).
 
@@ -296,11 +296,11 @@ do estado exato do banco).
 ### Etapa 8 — Fechamento e PR para `main` 🛑 CHECKPOINT HUMANO
 
 **Por quê checkpoint**: é a etapa final antes do merge em `main` (protegida) — pedido
-explícito, além de ser sempre exigido pelo `CLAUDE.md` §6/§8.
+explícito, além de ser sempre exigido pelas diretrizes do projeto.
 
-**Arquivos**: `CLAUDE.md` (atualiza a linha da Etapa 5 na tabela de status, seção 9, de
-`⬜ próximo passo` para `✅`), `docs/prds/etapa5-api.md` (atualiza o `> Status: proposto`
-do topo para `implementado`).
+**Arquivos**: documentação de contexto do projeto (atualiza a linha da Etapa 5 na tabela
+de status, de `⬜ próximo passo` para `✅`), `docs/prds/etapa5-api.md` (atualiza o
+`> Status: proposto` do topo para `implementado`).
 
 **O que fazer**: rodar a suíte completa (`pytest tests/`), revisar o diff acumulado da
 branch (`git diff main...feature/etapa5-api`), abrir o PR via `gh pr create` (squash-merge,

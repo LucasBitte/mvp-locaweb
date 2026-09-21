@@ -99,7 +99,7 @@ troca de `k`** — mas também não há uma defesa estatística de que `k=4` sej
 ML-2), não decidida automaticamente aqui.
 
 **PCA**: `PCA(n_components=3)` (produção) explica **39,95%** da variância —
-divergente do comentário do notebook ("95% variância", ver `CLAUDE.md` §4 e
+divergente do comentário do notebook ("95% variância", ver
 `PLAN.md` Anexo A.3). Isso reduz a informação disponível para o clustering
 mais do que a documentação original sugeria; não foi alterado nesta rodada
 (mudar `n_components` muda o resultado do modelo em produção — checkpoint

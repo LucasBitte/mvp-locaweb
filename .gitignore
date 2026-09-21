@@ -28,3 +28,7 @@ mlflow.db
 .vscode/
 .idea/
 .DS_Store
+
+# Notas internas de contexto (uso local, não versionado)
+CLAUDE.md
+.claude/

@@ -1,7 +1,7 @@
 """Dependências compartilhadas dos routers da API.
 
-Única via de conexão com o banco `fiap` (`CLAUDE.md` §6) — nenhum router
-deve abrir uma engine própria.
+Única via de conexão com o banco `fiap` — nenhum router deve abrir uma
+engine própria.
 """
 from __future__ import annotations
 

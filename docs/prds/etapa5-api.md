@@ -2,8 +2,8 @@
 
 > Status: proposto (contrato de dados — sem código). Cobre `app/api/` — Painel, Detalhe
 > (rótulo "Operação"), KPI (rótulo "OLA & Metas"), Fatores, Clusters, Alertas. Nomes
-> canônicos e mapeamento tela↔fonte: `PLAN.md` §4. Ver `CLAUDE.md` §4 e §9 para o contexto
-> geral do pipeline.
+> canônicos e mapeamento tela↔fonte: `PLAN.md` §4. Ver a documentação de contexto do
+> projeto para o contexto geral do pipeline.
 >
 > **Revisão 2026-08-22 — fecha as lacunas do `PLAN.md` Fases 6-9/11 nos contratos abaixo.**
 > Este PRD havia sido escrito antes das Fases 1-5/10/12/13 do `PLAN.md` rodarem; boa parte
@@ -44,7 +44,7 @@ real por trás:
 
 Sem decidir explicitamente, endpoint a endpoint, o que é dado real, o que ainda é lacuna
 sinalizada e o que fica fora de escopo, a implementação da Etapa 5 corre o risco de repetir
-dois mal-entendidos já sinalizados no `CLAUDE.md`/`PLAN.md`: tratar a proporção histórica
+dois mal-entendidos já sinalizados na documentação do projeto: tratar a proporção histórica
 do forecast por prioridade/categoria/produto como um modelo por corte, e apresentar
 `ml.fct_shap_incidente` como explicação do forecast de amanhã em vez de risco individual.
 

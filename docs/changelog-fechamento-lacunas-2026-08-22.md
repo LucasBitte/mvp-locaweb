@@ -61,9 +61,9 @@ a Etapa 5 consumir, não estão expostas via API.
   consolidadas.
 - `docs/dicionario-dados.md` — atualizado com as 3 tabelas novas (seção
   correspondente de cada schema).
-- `CLAUDE.md` — seção 2 (comandos) ganhou os 4 scripts novos na ordem de
-  execução; seção 4 marca as lacunas de P2/P3, pressão por equipe, produto,
-  recorrência e diagnóstico K-Means como fechadas.
+- Documentação de contexto do projeto — comandos ganharam os 4 scripts novos
+  na ordem de execução; lacunas de P2/P3, pressão por equipe, produto,
+  recorrência e diagnóstico K-Means marcadas como fechadas.
 
 ## 5. O que NÃO mudou
 
@@ -83,6 +83,6 @@ a Etapa 5 consumir, não estão expostas via API.
 
 `docs/design/aiops_dashboard_redesign.html` (mockup de referência das 6
 telas) foi removido do disco durante esta sessão por ação externa a este
-trabalho (confirmado com o usuário como intencional, não uma ação deste
-agente). `CLAUDE.md` §1 ainda referencia esse caminho — se a remoção for
+trabalho (confirmado com o usuário como intencional). A documentação de
+contexto do projeto ainda referencia esse caminho — se a remoção for
 definitiva, essa referência precisa ser atualizada numa próxima revisão.

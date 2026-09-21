@@ -17,7 +17,7 @@ existe na tabela bruta `public.incidentes` (122.543 linhas, inclui ruído de
 monitoramento autorresolvido), não no grão de esforço real.
 
 **Impacto**: o corte de regime que o Prophet detecta e usa para restringir o
-treino (`quebras_de_patamar_detectadas`, ver `CLAUDE.md` §10) opera sobre
+treino (`quebras_de_patamar_detectadas`) opera sobre
 `ml.ml_forecast_dataset` — mesma linhagem filtrada de `ml.ml_base_features` —
 não sobre o volume bruto. Confundir os dois levaria a esperar uma quebra de
 patamar que não existe nesse grão.
@@ -37,8 +37,7 @@ grande maioria do volume operacional — e que P1 tem volume estatisticamente
 insignificante para qualquer modelo dedicado.
 
 **Decisão**: manter P1 fora de qualquer forecast/classificação dedicada
-(dado insuficiente); P2+P3 como filtro padrão nas telas, conforme já
-registrado em `CLAUDE.md`.
+(dado insuficiente); P2+P3 como filtro padrão nas telas.
 
 ## 3. Equipe — concentração extrema em Team14/Team11/Team05
 
