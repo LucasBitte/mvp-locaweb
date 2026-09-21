@@ -5,7 +5,7 @@
 --
 -- pressao_relativa_pct = ((yhat_previsto - media_historica_diaria) / media_historica_diaria) * 100
 --
--- nivel_pressao (faixa fixa, documentada em notebooks/pressao_equipe.py,
+-- nivel_pressao (faixa fixa, documentada em notebooks/etapa06_pressao_por_equipe.py,
 -- não é saída de modelo): <=10% normal, 10-30% atenção, >30% crítico.
 --
 -- Para equipes de Grupo C (metodo_origem='split_proporcional', média diária

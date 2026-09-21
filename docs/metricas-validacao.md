@@ -3,7 +3,7 @@
 > Nenhum número nesta página foi inventado ou estimado — todos vêm de
 > artefatos já gerados pelos notebooks/scripts de modelo (`data/ml/prophet/`,
 > `data/ml/xgboost/`, `data/ml/kmeans/`) ou do diagnóstico read-only novo
-> desta rodada (`notebooks/diagnostico_kmeans_k.py`). Reaproveitado, não
+> desta rodada (`notebooks/etapa11_diagnostico_k_kmeans.py`). Reaproveitado, não
 > reconstruído — conforme Anexo A do `PLAN.md`.
 
 ## 1. Prophet — forecast total (`ml.fct_previsao_diaria_total`)
@@ -73,7 +73,7 @@ não "violou OLA oficial" (mais raro e mais relevante para o KPI).
 
 Fonte: `data/ml/kmeans/fct_model_metrics.parquet` (produção, `k=4`) +
 `data/ml/kmeans/diagnostico_k_2_a_8.parquet` (diagnóstico novo desta rodada,
-read-only, `notebooks/diagnostico_kmeans_k.py`).
+read-only, `notebooks/etapa11_diagnostico_k_kmeans.py`).
 
 | k | Silhouette | Davies-Bouldin | Inertia |
 |---|---|---|---|

@@ -1,7 +1,7 @@
 # EDA consolidada — PLAN.md Fase 12
 
 > Consolida em formato Achado/Impacto/Decisão as evidências já levantadas em
-> `notebooks/02_exploratory_data_analysis_silver.ipynb` (EDA completa da
+> `notebooks/exploracao_eda_silver.ipynb` (EDA completa da
 > camada Silver, 6 fases próprias) mais consultas de confirmação rodadas
 > direto contra `dw.fct_incidentes` em 2026-08-22 (41.441 linhas, grão já
 > filtrado — ver `docs/modelo-dimensional.md`). Números desta página são
@@ -127,6 +127,6 @@ do Prophet nas equipes afetadas (Grupo A/B).
 ---
 
 Fonte completa e detalhada da EDA original (6 fases, hipóteses de negócio
-validadas): `notebooks/02_exploratory_data_analysis_silver.ipynb`. Esta
+validadas): `notebooks/exploracao_eda_silver.ipynb`. Esta
 página é o resumo executivo para a Sprint 3 (PLAN.md Fase 16), não substitui
 o notebook.

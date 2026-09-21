@@ -5,7 +5,7 @@
 
  Compara o forecast D+1..D+7 de ml.fct_previsao_grupo contra a media
  historica diaria da propria equipe (calendario completo 2025, zero-fill,
- mesma serie usada em notebooks/forecast_equipe.py).
+ mesma serie usada em notebooks/etapa05_forecast_por_equipe.py).
 
  pressao_relativa_pct = ((yhat_previsto - media_historica_diaria) / media_historica_diaria) * 100
 
@@ -13,7 +13,7 @@
  comparacao de volume previsto contra o proprio historico da equipe.
 
  Requisito de sequenciamento: precisa rodar DEPOIS de
- `python notebooks/forecast_equipe.py --fonte sql` (le a origem mais recente
+ `python notebooks/etapa05_forecast_por_equipe.py --fonte sql` (le a origem mais recente
  ja persistida em ml.fct_previsao_grupo).
 
  Grava em ml.fct_pressao_equipe (append, idempotente por origem via
@@ -39,8 +39,8 @@ PROJECT_ROOT = find_project_root(Path(__file__).resolve().parent if "__file__" i
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from notebooks.forecast_equipe import GRUPO_A, GRUPO_B, GRUPO_C, carregar_serie_equipe  # noqa: E402
-from notebooks.forecast_incidentes_revisado import _md5  # noqa: E402
+from notebooks.etapa05_forecast_por_equipe import GRUPO_A, GRUPO_B, GRUPO_C, carregar_serie_equipe  # noqa: E402
+from notebooks.etapa04_forecast_volume_total import _md5  # noqa: E402
 
 MODELO_VERSAO_PRESSAO = "pressao_equipe_v1"
 
@@ -78,7 +78,7 @@ def montar_pressao(engine, medias: dict[str, float]) -> pd.DataFrame:
     if prev.empty:
         raise RuntimeError(
             "Nenhuma previsao em ml.fct_previsao_grupo. Rode "
-            "'python notebooks/forecast_equipe.py --fonte sql' primeiro."
+            "'python notebooks/etapa05_forecast_por_equipe.py --fonte sql' primeiro."
         )
 
     prev["media_historica_diaria"] = prev["grupo_designado"].map(medias)

@@ -131,7 +131,7 @@ da `serie` ganham `"metodologia": "proporcao_historica"` e `"share_historico"` (
 `pressao_equipes` é sempre relativa a D+1 (`h=1`), ordenada por `pressao_relativa_pct` desc,
 lida diretamente de `ml.fct_pressao_equipe` — a API **nunca recalcula** a fórmula
 (`(yhat_previsto - media_historica_diaria) / media_historica_diaria * 100`), só lê o valor
-já persistido pelo `notebooks/pressao_equipe.py`. `nivel_pressao` vem da mesma coluna
+já persistido pelo `notebooks/etapa06_pressao_por_equipe.py`. `nivel_pressao` vem da mesma coluna
 (`normal`/`atencao`/`critico`, limiares fixos `<=10%`/`10-30%`/`>30%` documentados no
 notebook, não recalculados na API).
 
@@ -395,7 +395,7 @@ Fontes: `ml.fct_perfil_cluster` join `ml.dim_cluster` (execução mais recente).
 
 > ⚠️ **Dois achados de auditoria (2026-08-22), verificados ao vivo contra o banco:**
 > 1. `ml.fct_perfil_cluster.taxa_sla_violado_pct` é calculada em
->    `model_clustering_kmeans_Revisado.ipynb` a partir de `excedeu_tempo_esperado`
+>    `etapa09_clusters_kmeans.ipynb` a partir de `excedeu_tempo_esperado`
 >    (duração > threshold da prioridade) — **94-98% em todos os 4 clusters** no banco real
 >    hoje. O indicador oficial de SLA (`kpi_status_int=1`, o mesmo da tela KPI) dá
 >    **0,95%** no total do banco — duas definições de "violação" com ordens de grandeza de

@@ -10,9 +10,9 @@
 
 | Tabela | Migration | Script que popula | Linhas | Schema completo |
 |---|---|---|---|---|
-| `ml.fct_pressao_equipe` | `026_ml_fct_pressao_equipe.sql` | `notebooks/pressao_equipe.py` | 112 (16 equipes × D+1..D+7) | `docs/dicionario-dados.md` |
-| `ml.fct_previsao_produto` | `027_ml_fct_previsao_produto.sql` | `notebooks/forecast_produto.py` | 357 (51 produtos × D+1..D+7) | `docs/dicionario-dados.md` |
-| `dw.fct_recorrencia_operacional` | `028_dw_fct_recorrencia_operacional.sql` | `notebooks/recorrencia.py` | 649 (4 granularidades) | `docs/dicionario-dados.md` |
+| `ml.fct_pressao_equipe` | `026_ml_fct_pressao_equipe.sql` | `notebooks/etapa06_pressao_por_equipe.py` | 112 (16 equipes × D+1..D+7) | `docs/dicionario-dados.md` |
+| `ml.fct_previsao_produto` | `027_ml_fct_previsao_produto.sql` | `notebooks/etapa07_forecast_por_produto.py` | 357 (51 produtos × D+1..D+7) | `docs/dicionario-dados.md` |
+| `dw.fct_recorrencia_operacional` | `028_dw_fct_recorrencia_operacional.sql` | `notebooks/etapa08_recorrencia_operacional.py` | 649 (4 granularidades) | `docs/dicionario-dados.md` |
 
 Todas as 3 são **dado novo, aditivo** — nenhuma coluna de tabela existente
 foi renomeada, removida ou teve seu tipo alterado. `ml.fct_pressao_equipe`

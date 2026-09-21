@@ -432,7 +432,7 @@ export function computeHeatmap(celulas: HeatmapCelula[]) {
 // ---------------------------------------------------------------------------
 
 // Eixo Y fixo em [90,100] — mesma decisão do bubble chart do notebook
-// (model_clustering_kmeans_Revisado.ipynb, célula [6c]): os 4 clusters reais
+// (etapa09_clusters_kmeans.ipynb, célula [6c]): os 4 clusters reais
 // ficam entre ~94% e ~98% de taxa_excedeu_tempo_esperado_pct; em escala
 // livre (0-100%) essa diferença real fica achatada perto do topo.
 const BOLHA_Y_MIN = 90
@@ -540,7 +540,7 @@ export function computeBolhas(clusters: ClusterItem[]) {
 }
 
 /** Tabela resumo executivo dos clusters — mesmo espírito da tabela do
- * notebook (model_clustering_kmeans_Revisado.ipynb, célula [6c] item 1),
+ * notebook (etapa09_clusters_kmeans.ipynb, célula [6c] item 1),
  * usando os campos já expostos por /api/clusters (sem endpoint novo). */
 export function computeResumoClusters(clusters: ClusterItem[]) {
   return clusters.map((c) => ({

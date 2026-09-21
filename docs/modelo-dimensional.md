@@ -1,6 +1,6 @@
 # Modelo dimensional — schema `dw` (banco `fiap`)
 
-Construído a partir de `public.incidentes` via `notebooks/04_dw_star_schema.ipynb`
+Construído a partir de `public.incidentes` via `notebooks/etapa02_star_schema_dw.ipynb`
 (SQL puro via SQLAlchemy) e `etl/transform.py` (equivalente em pandas) — os
 dois implementam a mesma lógica e devem ser mantidos em paridade.
 
@@ -65,11 +65,11 @@ estavam com valores incorretos desde a construção original do `dw`.
 | 5 - Muito Baixa | sem meta (`NULL`) | **96h** |
 
 **Causa raiz**: o dict `SLA_THRESHOLD_HORAS = {1: 4, 2: 8, 3: 24, 4: 72}`
-(`etl/transform.py`, replicado em SQL no notebook `04_dw_star_schema.ipynb`)
+(`etl/transform.py`, replicado em SQL no notebook `etapa02_star_schema_dw.ipynb`)
 foi definido sem conferir contra o Dicionário de Dados oficial do desafio.
 Uma camada anterior do pipeline (a heurística da Silver) já usava o valor
 certo de P2 (4h) para `target_risco_sla` (camada 2,
-`notebooks/03_bronze_silver_transformacao.ipynb`) — mas ao montar o `dw`
+`notebooks/etapa01_bronze_para_silver.ipynb`) — mas ao montar o `dw`
 nesta adaptação, esse heurístico foi "corrigido" para 8h **na direção
 errada**, achando que o `threshold_sla_horas` de `dim_prioridade` (que já
 estava errado) era a fonte da verdade. O erro só existia em `dw.*`:
@@ -92,8 +92,8 @@ e `ml.ml_sla_classification_dataset.target_excedeu_tempo` (notebook 05,
 célula 7) foram corrigidos para os thresholds oficiais — essa é justamente a
 coluna usada como rótulo de treino do XGBoost, então a correção exigiu
 retreinar o modelo, não só recalcular a mart. Sequência executada:
-`05_ml_feature_marts.ipynb` → `model_clustering_kmeans_Revisado.ipynb` →
-`model_risk_xgboost_.ipynb`, nessa ordem, ponta a ponta (0 erros nos três).
+`etapa03_feature_marts_ml.ipynb` → `etapa09_clusters_kmeans.ipynb` →
+`etapa10_risco_sla_xgboost.ipynb`, nessa ordem, ponta a ponta (0 erros nos três).
 Distribuição de `target_excedeu_tempo` por prioridade após a correção bate
 exatamente com a de `dw.fct_incidentes.excedeu_tempo_esperado` (mesmo
 threshold agora nos dois lugares). `ml.fct_perfil_cluster`/`ml.fct_risco_incidente`/
@@ -106,7 +106,7 @@ sobe para 2º lugar).
 
 **Bug de infraestrutura descoberto durante a correção — ~~resolvido em
 2026-08-22~~**: `TRUNCATE dw.fct_incidentes` (usado tanto por
-`etl/transform.py` quanto pelo notebook `04_dw_star_schema.ipynb`) passou a
+`etl/transform.py` quanto pelo notebook `etapa02_star_schema_dw.ipynb`) passou a
 falhar com `FeatureNotSupported` desde que `ml.fct_risco_incidente` e
 `ml.fct_shap_incidente` ganharam FK para `dw.fct_incidentes` (migrations
 021/022, Etapa 4) — TRUNCATE não permite referências de FK sem CASCADE, e
@@ -192,7 +192,7 @@ quebra por equipe de fato precisa refletir que equipes grandes têm série
 diária modelável e equipes pequenas não — por isso a arquitetura é
 **híbrida**, não um split único para as 16.
 
-### Corte de viabilidade (investigação em `notebooks/06_forecast_investigacao_equipe.ipynb`)
+### Corte de viabilidade (investigação em `notebooks/exploracao_viabilidade_equipe.ipynb`)
 
 Fonte: `ml.ml_base_features` (mesma linhagem de `ml.ml_forecast_dataset`,
 que já alimenta o Prophet do total — não `dw.fct_incidentes`, que teve
@@ -223,7 +223,7 @@ de treinar essa equipe: os dias de maior volume são dominados por um único
 incidente-pai gerando uma rajada de filhos no mesmo dia, para a mesma
 equipe — ex.: 2025-06-26, `INC8445074` sozinho gerou 227 dos 270 chamados
 do dia (84%). Isso se repete em 22 dias distintos do ano
-(`notebooks/forecast_equipe.py`, `detectar_storm_days`, regra: um pai
+(`notebooks/etapa05_forecast_por_equipe.py`, `detectar_storm_days`, regra: um pai
 não-`'Independente'` ≥40% do volume do dia E dia ≥2× a mediana diária da
 equipe), cada vez via um pai **diferente e não relacionado** — não é bug de
 atribuição de `grupo_designado`, é um padrão operacional real e recorrente,

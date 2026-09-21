@@ -52,7 +52,7 @@ nos dados/artefatos; só não estavam documentados.
 ### 3.1 Métrica de "violação" do cluster tinha dois significados diferentes
 
 `ml.fct_perfil_cluster.taxa_sla_violado_pct` é calculada em
-`model_clustering_kmeans_Revisado.ipynb` a partir de `excedeu_tempo_esperado`
+`etapa09_clusters_kmeans.ipynb` a partir de `excedeu_tempo_esperado`
 (duração > threshold da prioridade) — **94-98% em todos os 4 clusters** no
 banco real. O indicador oficial de SLA (`kpi_status_int=1`, o mesmo usado
 corretamente na tela KPI) dá **0,95%** no banco inteiro — duas definições de

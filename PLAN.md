@@ -29,12 +29,12 @@ retreino, commit, merge ou push nesta tarefa.
 ```
 public.incidentes              (bronze — 122.543 linhas, 2023-2025)
         │
-        ▼  notebook 03
+        ▼  etapa01
 staging.incidentes_silver      (silver — 41.441 linhas, pós-2025)
         │
-        ├──▶ notebook 04 ──▶ dw.*        (star schema)
+        ├──▶ etapa02   ──▶ dw.*        (star schema)
         │
-        └──▶ notebook 05 ──▶ ml.ml_*     (marts de features)
+        └──▶ etapa03   ──▶ ml.ml_*     (marts de features)
                                    │
                                    ▼
                     forecast total / forecast por equipe / clustering / xgboost
@@ -163,7 +163,7 @@ corrigidos, ver `docs/modelo-dimensional.md`).
 ## Fase 3 — Forecast e pressão por equipe ✅ implementada (2026-08-22)
 
 **Resultado**: `ml.fct_pressao_equipe` criada (migration
-`026_ml_fct_pressao_equipe.sql`) e populada por `notebooks/pressao_equipe.py`
+`026_ml_fct_pressao_equipe.sql`) e populada por `notebooks/etapa06_pressao_por_equipe.py`
 (112 linhas, origem=2025-12-31, mesmo padrão append/idempotente por origem
 de `ml.fct_previsao_grupo`). D+1: `Team02` lidera com +29,4% (`atencao`),
 seguido de `Team03` +17,0% e `Team17` +13,1% (ambos `atencao`); nenhuma
@@ -194,7 +194,7 @@ UI.
 
 **Resultado**: `ml.fct_previsao_produto` criada (migration
 `027_ml_fct_previsao_produto.sql`) e populada por
-`notebooks/forecast_produto.py` — mesma técnica de proporção histórica de
+`notebooks/etapa07_forecast_por_produto.py` — mesma técnica de proporção histórica de
 `fct_previsao_categoria` (`calcular_shares()` reaproveitada, mesmo recorte
 de regime). 51 produtos, origem=2025-12-31. Top D+1: `lhco` (27,7% do
 histórico, 34,5 previstos), `lsin` (14,5%), `lcem` (13,4%). Decisão
@@ -220,7 +220,7 @@ Sem simular CI (item de configuração): `item_configuracao` existe em
 
 **Resultado**: `dw.fct_recorrencia_operacional` criada (migration
 `028_dw_fct_recorrencia_operacional.sql`) e populada por
-`notebooks/recorrencia.py` (649 linhas, janela_referencia=2025-12-31, janela
+`notebooks/etapa08_recorrencia_operacional.py` (649 linhas, janela_referencia=2025-12-31, janela
 atual 2025-12-02..2025-12-31 vs. janela anterior 2025-11-02..2025-12-01).
 Classificação combina `delta_pct` com `cobertura_dias_atual_pct` (não é só
 volume alto — ver limiares documentados no script). Exemplo real de
@@ -296,7 +296,7 @@ risco do XGBoost. Nunca misturar as três. Contrato de dados completo:
 ## Fase 10 — Clusters / K-Means ✅ diagnóstico executado (2026-08-22)
 
 **Resultado do diagnóstico `k=2..8`** (read-only,
-`notebooks/diagnostico_kmeans_k.py`, resultado completo em
+`notebooks/etapa11_diagnostico_k_kmeans.py`, resultado completo em
 `docs/metricas-validacao.md` §3): silhouette maximizado em `k=2` (0,3814),
 Davies-Bouldin minimizado em `k=8` (0,8961), sem cotovelo nítido na curva de
 inertia. `k=4` (produção): silhouette=0,3413, Davies-Bouldin=0,9876 —
@@ -315,7 +315,7 @@ tamanho da bolha = `pct_volume`. Interpretação de negócio obrigatória em
 cada card (não só números).
 
 **Diagnóstico pendente, confirmado nesta auditoria** (ver Anexo A/A.4):
-`notebooks/model_clustering_kmeans_Revisado.ipynb` tem `k=4` hardcoded
+`notebooks/etapa09_clusters_kmeans.ipynb` tem `k=4` hardcoded
 (linha 531) e `PCA(n_components=3, random_state=42)` hardcoded (linha 479) —
 o comentário do notebook diz "95% variância" mas a variância explicada real
 impressa na execução é **39.95%**. `silhouette_score`/`davies_bouldin_score`
@@ -376,7 +376,7 @@ código nesta auditoria, não só pela referência das skills). Consolidar em
 uma tabela única (Modelo | Métrica | Resultado | Baseline | Interpretação):
 
 - **Prophet (total e por equipe)**: reutilizar o que já existe em
-  `notebooks/forecast_incidentes_revisado.py` — backtest de origem móvel
+  `notebooks/etapa04_forecast_volume_total.py` — backtest de origem móvel
   (`backtest()`), baselines (`naive_ultimo`, `snaive_lag7`,
   `mediana_dow_4sem`, médias móveis), MAE, RMSE, WAPE (não MAPE — decisão já
   tomada por causa de volume baixo em algumas séries), MASE (denominador =
@@ -384,7 +384,7 @@ uma tabela única (Modelo | Métrica | Resultado | Baseline | Interpretação):
   (`cobertura%`), split temporal. **Diagnóstico de resíduos (ACF) já existe**
   (`acf_residuos()`, painel "ACF dos resíduos D+1") — não é gap, só
   consolidar o resultado já gerado.
-- **XGBoost**: `notebooks/model_risk_xgboost_.ipynb` já calcula ROC-AUC
+- **XGBoost**: `notebooks/etapa10_risco_sla_xgboost.ipynb` já calcula ROC-AUC
   (treino/validação/teste, com gap monitorado), PR-AUC, F1, precision,
   recall, Brier score (com e sem calibração, inclusive por estrato),
   threshold escolhido por validação (`argmax` de F1 em grade), backtest
@@ -477,7 +477,7 @@ guias de referência não específicos deste projeto).
 
 ### A.2 algo-forecast-prophet
 
-- **Já implementado** (confirmado em `notebooks/forecast_incidentes_revisado.py`):
+- **Já implementado** (confirmado em `notebooks/etapa04_forecast_volume_total.py`):
   backtest de origem móvel, baselines (naive, sazonal naive lag-7, médias
   móveis, mediana por dia-da-semana), ensemble, MAE, RMSE, WAPE, MASE,
   cobertura de intervalo, split temporal.
@@ -488,7 +488,7 @@ guias de referência não específicos deste projeto).
 - **Documentação de hiperparâmetros: já presente em comentário no código**
   (`changepoint_range=1.0`, `changepoint_prior_scale=0.05`,
   `seasonality_mode="additive"`, linhas 69-73 de
-  `notebooks/forecast_incidentes_revisado.py`, com justificativa inline do
+  `notebooks/etapa04_forecast_volume_total.py`, com justificativa inline do
   porquê de `changepoint_range=1.0` em vez do default `0.8`).
 - Regra permanece: qualquer diagnóstico aqui é read-only; não retreinar sem
   aprovação.
@@ -511,7 +511,7 @@ guias de referência não específicos deste projeto).
   varredura (`grep -rn OneHotEncoder`) não encontrou nenhuma chamada
   literal `OneHotEncoder(...)` e por isso a alegação foi marcada como "não
   confirmada". Inspeção mais profunda da célula `[6a]` de
-  `model_clustering_kmeans_Revisado.ipynb` (atribuição de cluster para
+  `etapa09_clusters_kmeans.ipynb` (atribuição de cluster para
   outliers) encontrou o código morto de fato: as variáveis
   `low_cardinality_cols`/`high_cardinality_cols` e um bloco inteiro
   `if 'encoder' in locals(): ... encoder.transform(...)` (comentado "One-Hot

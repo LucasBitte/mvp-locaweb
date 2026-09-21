@@ -100,12 +100,12 @@ intenso. Nesta ordem:
 ```
 public.incidentes              (bronze — 122.543 linhas, 2023-2025)
         │
-        ▼  notebook 03
+        ▼  etapa01
 staging.incidentes_silver      (silver — 41.441 linhas, pós-2025)
         │
-        ├──▶ notebook 04 ──▶ dw.*        (star schema, 6 dimensões + fato)
+        ├──▶ etapa02   ──▶ dw.*        (star schema, 6 dimensões + fato)
         │
-        └──▶ notebook 05 ──▶ ml.ml_*     (marts de features, leakage-free)
+        └──▶ etapa03   ──▶ ml.ml_*     (marts de features, leakage-free)
                                    │
                                    ▼
                     forecast total / forecast por equipe / clustering / xgboost
@@ -161,7 +161,7 @@ nunca "por que haverá mais chamados amanhã".
 **Decisão de arquitetura mais visível da Sprint 2**: o forecast por equipe
 não podia ser um split proporcional único, porque 16 equipes têm volumes
 radicalmente diferentes (`Team14` sozinha = 41,3% do volume; 13 equipes
-dividem 17,3%). A investigação (`notebooks/06_forecast_investigacao_equipe.ipynb`)
+dividem 17,3%). A investigação (`notebooks/exploracao_viabilidade_equipe.ipynb`)
 cortou em 3 grupos por viabilidade de série diária — Grupo A (Prophet
 individual, 4 equipes), Grupo B (Prophet diário/semanal conforme
 desempenho, 4 equipes), Grupo C (split proporcional, 8 equipes). Detalhe
