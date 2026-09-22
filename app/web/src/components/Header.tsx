@@ -1,12 +1,12 @@
 import { MUTED, NAVY, SUB } from '../lib/theme'
 
-export const TABS: { name: string; sub: string }[] = [
-  { name: 'Painel', sub: 'Visão geral' },
-  { name: 'Detalhe', sub: 'Operação' },
-  { name: 'KPI', sub: 'OLA & Metas' },
-  { name: 'Fatores', sub: 'Fatores de Risco' },
-  { name: 'Clusters', sub: 'Perfis Operacionais' },
-  { name: 'Alertas', sub: 'Alertas & Ações' },
+export const TABS: { name: string; sub: string; pergunta: string }[] = [
+  { name: 'Painel', sub: 'Visão geral', pergunta: 'Quanto trabalho vem por aí e a operação está sob risco?' },
+  { name: 'Detalhe', sub: 'Operação', pergunta: 'Onde esse volume vai bater — em que prioridade, categoria e produto?' },
+  { name: 'KPI', sub: 'OLA & Metas', pergunta: 'Vamos fechar o ano dentro da meta contratual de OLA?' },
+  { name: 'Fatores', sub: 'Fatores de Risco', pergunta: 'Por que um incidente é classificado como arriscado?' },
+  { name: 'Clusters', sub: 'Perfis Operacionais', pergunta: 'Que perfis de incidente existem e qual trava mais a operação?' },
+  { name: 'Alertas', sub: 'Alertas & Ações', pergunta: 'O que fazer agora, e com base em qual evidência?' },
 ]
 
 interface HeaderProps {

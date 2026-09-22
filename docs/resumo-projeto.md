@@ -82,7 +82,7 @@ Notas de escopo que valem saber ao consumir estas tabelas:
 mvp-locaweb/
 ├── db/migrations/     # DDL versionado (022 migrations)
 ├── etl/                # db.py (conexão via .env), transform.py (bronze -> dw, standalone)
-├── notebooks/          # 01-05 (pipeline) + os 3 modelos de ML + conexao_banco_fiap.ipynb
+├── notebooks/          # 01-05 (pipeline) + os 3 modelos de ML + apoio_conexao_banco.ipynb
 ├── app/api/             # FastAPI (esqueleto — ainda não construído)
 ├── app/web/              # React + Vite + Tailwind + Recharts (esqueleto)
 ├── docs/                # Documentação
@@ -115,12 +115,12 @@ python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 ./venv/bin/pip install -r requirements-notebooks.txt   # p/ rodar os notebooks
 
 # 3. Pipeline, em ordem (migrations já aplicadas no banco fiap)
-jupyter nbconvert --to notebook --execute --inplace notebooks/03_bronze_silver_transformacao.ipynb
-jupyter nbconvert --to notebook --execute --inplace notebooks/04_dw_star_schema.ipynb
-jupyter nbconvert --to notebook --execute --inplace notebooks/05_ml_feature_marts.ipynb
-python notebooks/forecast_incidentes_revisado.py --fonte sql
-jupyter nbconvert --to notebook --execute --inplace notebooks/model_clustering_kmeans_Revisado.ipynb
-jupyter nbconvert --to notebook --execute --inplace notebooks/model_risk_xgboost_.ipynb
+jupyter nbconvert --to notebook --execute --inplace notebooks/etapa01_bronze_para_silver.ipynb
+jupyter nbconvert --to notebook --execute --inplace notebooks/etapa02_star_schema_dw.ipynb
+jupyter nbconvert --to notebook --execute --inplace notebooks/etapa03_feature_marts_ml.ipynb
+python notebooks/etapa04_forecast_volume_total.py --fonte sql
+jupyter nbconvert --to notebook --execute --inplace notebooks/etapa09_clusters_kmeans.ipynb
+jupyter nbconvert --to notebook --execute --inplace notebooks/etapa10_risco_sla_xgboost.ipynb
 
 # 4. Testes
 ./venv/bin/pytest tests/

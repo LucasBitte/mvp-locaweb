@@ -94,7 +94,7 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
             <div style={{ flex: 1, height: 6, borderRadius: 3, background: 'rgba(214,69,69,.25)' }} />
           </div>
           <span style={{ font: '400 11px/1.4 Inter,sans-serif', color: SUB }}>
-            Média móvel de <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>pct_violacao_sla</span> nos últimos{' '}
+            Verde até 1%, âmbar até 2,5%, vermelho acima — média móvel dos últimos{' '}
             {data.risco_ola.janela_dias} dias
           </span>
           <SourceTag visible={mostrarOrigem}>REGRA DETERMINÍSTICA</SourceTag>
@@ -150,7 +150,7 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={cardTitle}>Previsão D+1…D+7</span>
-              <span style={cardSub}>Incidentes por dia · escala diária</span>
+              <span style={cardSub}>Cada barra é um dia; a tracejada marca a média da semana</span>
             </div>
             <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO</SourceTag>
           </div>
@@ -181,6 +181,7 @@ export function PainelScreen({ mostrarOrigem, limiarCritico }: PainelScreenProps
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={cardTitle}>Pressão por equipe — D+1</span>
             <span style={cardSub}>Desvio do volume previsto frente à média histórica da própria equipe</span>
+            <span style={cardSub}>A régua vermelha marca o limiar crítico de +{limiarCritico}% sobre essa média</span>
           </div>
           <SourceTag visible={mostrarOrigem}>REGRA · LIMIAR &gt;{limiarCritico}%</SourceTag>
         </div>

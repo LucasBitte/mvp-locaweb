@@ -26,7 +26,7 @@ ml.ml_base_features (grão: incidente)
         │
         ├─ agregação diária por (grupo_designado, data_abertura)
         │  calendário completo, zero-fill
-        │  → notebooks/06_forecast_investigacao_equipe.ipynb (Fase 0)
+        │  → notebooks/exploracao_viabilidade_equipe.ipynb (Fase 0)
         │
         ▼
   corte de viabilidade por média diária ────────────────────────────┐
@@ -35,7 +35,7 @@ ml.ml_base_features (grão: incidente)
    │ Grupo A │  média ≥ 5/dia                                │   Grupo C    │
    │ Grupo B │  1 ≤ média < 5/dia                             │ média < 1/dia│
    └────┬────┘                                              └───────┬──────┘
-        │  notebooks/forecast_equipe.py (Fase 1)                    │
+        │  notebooks/etapa05_forecast_por_equipe.py (Fase 1)                    │
         ▼                                                            ▼
   Prophet diário individual                          split proporcional do yhat
   (holidays = storm days)                             de ml.fct_previsao_diaria_total
@@ -55,7 +55,7 @@ de SLA, ver `docs/modelo-dimensional.md`).
 
 ## 3. Corte de viabilidade (Fase 0 — investigação)
 
-Notebook: `notebooks/06_forecast_investigacao_equipe.ipynb` (executado,
+Notebook: `notebooks/exploracao_viabilidade_equipe.ipynb` (executado,
 resultados salvos nas células). Métrica: **média diária de
 incidentes/equipe** sobre o calendário completo 2025-01-01 a 2025-12-31,
 com `% de dias zerados` e **coeficiente de variação** (desvio padrão /
@@ -93,8 +93,8 @@ Dois cotovelos claros no volume total por equipe:
 ## 4. Grupo A — Prophet individual por equipe
 
 Mesma metodologia/hiperparâmetros de base do forecast total
-(`notebooks/forecast_incidentes_revisado.py`, reaproveitados por import em
-`notebooks/forecast_equipe.py`): `weekly_seasonality=True`,
+(`notebooks/etapa04_forecast_volume_total.py`, reaproveitados por import em
+`notebooks/etapa05_forecast_por_equipe.py`): `weekly_seasonality=True`,
 `yearly_seasonality=False` (menos de um ciclo anual completo de
 histórico), `changepoint_range=1.0`, `changepoint_prior_scale=0.05`,
 `interval_width=0.80`. Cada equipe: reindexação em calendário completo
@@ -111,7 +111,7 @@ mesmo dia, para a mesma equipe**. Exemplo: 2025-06-26, `INC8445074` sozinho
 gerou 227 dos 270 chamados do dia (84%).
 
 Isso se repete em **22 dias distintos** do ano
-(`notebooks/forecast_equipe.py`, função `detectar_storm_days`; regra: um
+(`notebooks/etapa05_forecast_por_equipe.py`, função `detectar_storm_days`; regra: um
 `incidente_pai` não-`'Independente'` responde por ≥40% do volume do dia da
 equipe **e** o volume do dia é ≥2× a mediana diária histórica da própria
 equipe), cada vez via um pai **diferente e sem relação** com os anteriores.
@@ -175,7 +175,7 @@ inicial (o rótulo do grupo é sobre viabilidade de *tentativa*; o `metodo`
 final gravado reflete o que realmente rodou).
 
 **Mecânica do fallback semanal** (`rodar_semanal`/`distribuir_semana_em_dias`
-em `notebooks/forecast_equipe.py`):
+em `notebooks/etapa05_forecast_por_equipe.py`):
 1. Agrega a série diária em semanas ISO (segunda a domingo), descarta
    semanas incompletas.
 2. Treina Prophet na série semanal (`weekly_seasonality=False`,
@@ -229,7 +229,7 @@ CREATE INDEX IF NOT EXISTS ix_fct_previsao_grupo_ds ON ml.fct_previsao_grupo (ds
 ```
 
 **Append, não truncate+insert** — igual às demais tabelas de previsão.
-Idempotente por `origem`: `notebooks/forecast_equipe.py` faz
+Idempotente por `origem`: `notebooks/etapa05_forecast_por_equipe.py` faz
 `DELETE ... WHERE origem = :o` seguido de `INSERT` a cada execução, então
 rodar de novo para a mesma `origem` substitui, não duplica.
 
@@ -247,7 +247,7 @@ número vem de um modelo dedicado ou de uma estimativa derivada.
 
 ## 9. Checagem de consistência com o total
 
-`notebooks/forecast_equipe.py` roda, ao final, uma comparação diagnóstica
+`notebooks/etapa05_forecast_por_equipe.py` roda, ao final, uma comparação diagnóstica
 entre `SUM(yhat)` das 16 equipes e o `yhat` de `ml.fct_previsao_diaria_total`
 para o mesmo `(origem, ds)`. **Não é uma invariante exata** — Grupo A/B
 usam modelos independentes, não são splits do total, então alguma
@@ -275,8 +275,8 @@ corrente (Grupo C lê o `yhat` de lá) — falha alto e explícito se não
 houver:
 
 ```bash
-python notebooks/forecast_incidentes_revisado.py --fonte sql   # 1º: total
-python notebooks/forecast_equipe.py --fonte sql                 # 2º: por equipe, mesma origem
+python notebooks/etapa04_forecast_volume_total.py --fonte sql   # 1º: total
+python notebooks/etapa05_forecast_por_equipe.py --fonte sql                 # 2º: por equipe, mesma origem
 ```
 
 ~5 minutos para as 16 equipes (8 rodam backtest completo de origem móvel +
@@ -284,11 +284,11 @@ Prophet; Grupo C é só leitura + split, quase instantâneo).
 
 ## 11. Referências
 
-- `notebooks/06_forecast_investigacao_equipe.ipynb` — Fase 0, corte de
+- `notebooks/exploracao_viabilidade_equipe.ipynb` — Fase 0, corte de
   viabilidade (executado, com tabela + gráficos salvos).
-- `notebooks/forecast_equipe.py` — Fase 1-2, implementação (Prophet
+- `notebooks/etapa05_forecast_por_equipe.py` — Fase 1-2, implementação (Prophet
   individual, fallback semanal, split proporcional, persistência).
-- `notebooks/forecast_incidentes_revisado.py` — forecast total, fonte das
+- `notebooks/etapa04_forecast_volume_total.py` — forecast total, fonte das
   funções reaproveitadas (`Config`, `prever_prophet`, `backtest`,
   `validar_serie`, `metricas_gerais`, `BASELINES`, `calcular_shares`).
 - `db/migrations/025_ml_fct_previsao_grupo.sql` — schema.

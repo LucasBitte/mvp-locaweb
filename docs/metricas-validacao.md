@@ -3,7 +3,7 @@
 > Nenhum número nesta página foi inventado ou estimado — todos vêm de
 > artefatos já gerados pelos notebooks/scripts de modelo (`data/ml/prophet/`,
 > `data/ml/xgboost/`, `data/ml/kmeans/`) ou do diagnóstico read-only novo
-> desta rodada (`notebooks/diagnostico_kmeans_k.py`). Reaproveitado, não
+> desta rodada (`notebooks/etapa11_diagnostico_k_kmeans.py`). Reaproveitado, não
 > reconstruído — conforme Anexo A do `PLAN.md`.
 
 ## 1. Prophet — forecast total (`ml.fct_previsao_diaria_total`)
@@ -73,7 +73,7 @@ não "violou OLA oficial" (mais raro e mais relevante para o KPI).
 
 Fonte: `data/ml/kmeans/fct_model_metrics.parquet` (produção, `k=4`) +
 `data/ml/kmeans/diagnostico_k_2_a_8.parquet` (diagnóstico novo desta rodada,
-read-only, `notebooks/diagnostico_kmeans_k.py`).
+read-only, `notebooks/etapa11_diagnostico_k_kmeans.py`).
 
 | k | Silhouette | Davies-Bouldin | Inertia |
 |---|---|---|---|
@@ -99,7 +99,7 @@ troca de `k`** — mas também não há uma defesa estatística de que `k=4` sej
 ML-2), não decidida automaticamente aqui.
 
 **PCA**: `PCA(n_components=3)` (produção) explica **39,95%** da variância —
-divergente do comentário do notebook ("95% variância", ver `CLAUDE.md` §4 e
+divergente do comentário do notebook ("95% variância", ver
 `PLAN.md` Anexo A.3). Isso reduz a informação disponível para o clustering
 mais do que a documentação original sugeria; não foi alterado nesta rodada
 (mudar `n_components` muda o resultado do modelo em produção — checkpoint

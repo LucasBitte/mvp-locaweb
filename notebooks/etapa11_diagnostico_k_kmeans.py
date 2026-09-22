@@ -5,7 +5,7 @@
 
  NAO retreina nem altera o K-Means em producao (ml.dim_cluster/ml.fct_perfil_cluster
  permanecem intocados). Reproduz EXATAMENTE o pre-processamento de
- notebooks/model_clustering_kmeans_Revisado.ipynb (outlier removal, cause_cols,
+ notebooks/etapa09_clusters_kmeans.ipynb (outlier removal, cause_cols,
  encoding ciclico, frequency encoding, StandardScaler, PCA(n_components=3) —
  mesmos hiperparametros da producao) e varre k=2..8 medindo silhouette,
  Davies-Bouldin e inertia, para reportar se k=4 (valor hardcoded hoje) e
@@ -128,8 +128,8 @@ def main() -> None:
 
     out_dir = PROJECT_ROOT / "data" / "ml" / "kmeans"
     out_dir.mkdir(parents=True, exist_ok=True)
-    caminho = out_dir / "diagnostico_k_2_a_8.csv"
-    resultado.to_csv(caminho, index=False)
+    caminho = out_dir / "diagnostico_k_2_a_8.parquet"
+    resultado.to_parquet(caminho, index=False)
     print(f"\nRelatorio salvo em {caminho} — NENHUMA tabela do banco (ml.dim_cluster/"
           f"ml.fct_perfil_cluster) foi alterada. Decisao de retreinar e checkpoint humano.")
 

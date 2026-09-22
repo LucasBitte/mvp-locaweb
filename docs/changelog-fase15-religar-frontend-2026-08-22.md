@@ -60,8 +60,8 @@ real não sustenta o que a tela estática mostrava:
 `cannot execute: required file not found` — o venv foi originalmente criado
 em `/home/fiap/fiap-incidentes-dashboard/venv` e movido para
 `/home/fiap/mvp-locaweb/venv`; os console-scripts instalados antes da
-mudança têm o shebang hardcoded pro caminho antigo. Contorno documentado em
-`CLAUDE.md` §10 e aplicado em todos os comandos deste changelog: invocar via
+mudança têm o shebang hardcoded pro caminho antigo. Contorno aplicado em
+todos os comandos deste changelog: invocar via
 `./venv/bin/python3 -m <comando>` em vez do script direto.
 
 ## 5. O que NÃO mudou

@@ -436,7 +436,7 @@ export function computeHeatmap(celulas: HeatmapCelula[]) {
 // ---------------------------------------------------------------------------
 
 // Eixo Y fixo em [90,100] — mesma decisão do bubble chart do notebook
-// (model_clustering_kmeans_Revisado.ipynb, célula [6c]): os 4 clusters reais
+// (etapa09_clusters_kmeans.ipynb, célula [6c]): os 4 clusters reais
 // ficam entre ~94% e ~98% de taxa_excedeu_tempo_esperado_pct; em escala
 // livre (0-100%) essa diferença real fica achatada perto do topo.
 const BOLHA_Y_MIN = 90
@@ -544,7 +544,7 @@ export function computeBolhas(clusters: ClusterItem[]) {
 }
 
 /** Tabela resumo executivo dos clusters — mesmo espírito da tabela do
- * notebook (model_clustering_kmeans_Revisado.ipynb, célula [6c] item 1),
+ * notebook (etapa09_clusters_kmeans.ipynb, célula [6c] item 1),
  * usando os campos já expostos por /api/clusters (sem endpoint novo). */
 export function computeResumoClusters(clusters: ClusterItem[]) {
   return clusters.map((c) => ({
@@ -583,14 +583,6 @@ const SEVERIDADE_ALERTA: Record<Alerta['tipo'], { dot: string; bg: string; fg: s
 // Alguns valores de regra_origem (ex. cluster_alta_violacao) usam
 // terminologia interna que o projeto evita expor sem qualificação em
 // qualquer outro lugar do dashboard — nunca mostrar o id cru ao usuário.
-const REGRA_ORIGEM_LABEL: Record<string, string> = {
-  pico_volume_d1: 'Volume previsto para D+1',
-  pressao_operacional_equipe: 'Pressão operacional por equipe',
-  cluster_alta_violacao: 'Perfil operacional com tempo elevado',
-  concentracao_categoria: 'Concentração de categoria',
-  recorrencia_operacional: 'Recorrência operacional',
-}
-
 export function computeAlertas(alertas: Alerta[]) {
   return alertas.map((a) => {
     const s = SEVERIDADE_ALERTA[a.tipo]
@@ -604,6 +596,14 @@ export function computeAlertas(alertas: Alerta[]) {
       badgeFg: s.fg,
     }
   })
+}
+
+const REGRA_ORIGEM_LABEL: Record<string, string> = {
+  pico_volume_d1: 'Volume previsto para D+1',
+  pressao_operacional_equipe: 'Pressão operacional por equipe',
+  cluster_alta_violacao: 'Perfil operacional com tempo elevado',
+  concentracao_categoria: 'Concentração de categoria',
+  recorrencia_operacional: 'Recorrência operacional',
 }
 
 /** A API devolve um `texto` único por recomendação (sem título/corpo

@@ -72,6 +72,10 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
               ({foco.n} / {foco.total})
             </span>
           </span>
+          <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
+            P2 e P3 concentram a maior parte do volume — por isso são o padrão
+          </span>
+          <SourceTag variant="historico" visible={mostrarOrigem}>HISTÓRICO · DW</SourceTag>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
           <span style={{ font: '600 10px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em', color: SUB }}>
@@ -133,9 +137,7 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
                   <span style={{ font: "500 13px/1 'JetBrains Mono',monospace", color: cor }}>sem fonte</span>
                 </div>
                 <span style={{ font: '400 11px/1.45 Inter,sans-serif', color: SUB }}>
-                  Não existe limite mensal de volume por prioridade em nenhuma tabela hoje —{' '}
-                  <span style={{ fontFamily: "'JetBrains Mono',monospace" }}>is_placeholder_limite=true</span>, fora de escopo
-                  (não fabricado).
+                  Não existe meta mensal de volume por prioridade — preferimos deixar vazio a inventar um número.
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -146,9 +148,15 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
         })}
 
         <div className={cardClass} style={{ ...cardStyle, gap: 14 }}>
-          <span style={{ font: '600 12px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.05em', color: SUB }}>
-            Composição do volume histórico
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ font: '600 12px/1 Inter,sans-serif', textTransform: 'uppercase', letterSpacing: '.05em', color: SUB }}>
+              Composição do volume histórico
+            </span>
+            <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
+              Contagem e fatia de cada prioridade no volume real de 2025
+            </span>
+            <SourceTag variant="historico" visible={mostrarOrigem}>HISTÓRICO · DW</SourceTag>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
             {mix.map((m) => (
               <div key={m.p} style={{ display: 'grid', gridTemplateColumns: '34px 1fr 74px 58px', alignItems: 'center', gap: 12 }}>
@@ -170,7 +178,12 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2" style={{ gap: 20 }}>
         <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
-            <span style={cardTitle}>Top categorias — volume previsto D+1</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={cardTitle}>Top categorias — volume previsto D+1</span>
+              <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
+                Volume previsto para amanhã, distribuído pela proporção histórica de cada categoria
+              </span>
+            </div>
             <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO</SourceTag>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -188,7 +201,12 @@ export function DetalheScreen({ mostrarOrigem }: DetalheScreenProps) {
 
         <div className={cardClass} style={{ background: '#FFFFFF', borderRadius: 16, padding: '24px 28px', boxShadow: '0 4px 16px rgba(10,22,40,.03)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
-            <span style={cardTitle}>Top produtos — volume previsto D+1</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={cardTitle}>Top produtos — volume previsto D+1</span>
+              <span style={{ font: '400 12px/1.4 Inter,sans-serif', color: SUB }}>
+                A barra é o volume previsto; o texto traz a fatia histórica do produto
+              </span>
+            </div>
             <SourceTag variant="modelo" visible={mostrarOrigem}>MODELO</SourceTag>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

@@ -168,7 +168,7 @@ Análise de recorrência (PLAN.md Fase 5, 2026-08-22) — regra de negócio
 determinística, não saída de ML. Compara os últimos 30 dias contra os 30
 dias anteriores, por 4 granularidades (`produto`, `categoria`,
 `produto_categoria`, `categoria_subcategoria`). Recarregada por completo a
-cada execução (`notebooks/recorrencia.py`), não é append por origem.
+cada execução (`notebooks/etapa08_recorrencia_operacional.py`), não é append por origem.
 
 | Coluna | Tipo | Descrição |
 |---|---|---|
@@ -181,11 +181,11 @@ cada execução (`notebooks/recorrencia.py`), não é append por origem.
 | `delta_pct` | numeric (nulo) | `NULL` quando `volume_baseline = 0` |
 | `dias_com_incidente_atual` | smallint | 0-30 |
 | `cobertura_dias_atual_pct` | numeric | `dias_com_incidente_atual / 30 * 100` |
-| `status_recorrencia` | text | `recorrente_estavel` / `recorrente_crescente` / `recorrente_em_queda` / `pico_pontual` / `novo_padrao` / `volume_insuficiente` / `sem_padrao_claro` — limiares em `notebooks/recorrencia.py` |
+| `status_recorrencia` | text | `recorrente_estavel` / `recorrente_crescente` / `recorrente_em_queda` / `pico_pontual` / `novo_padrao` / `volume_insuficiente` / `sem_padrao_claro` — limiares em `notebooks/etapa08_recorrencia_operacional.py` |
 
 ## Marts de features para ML (schema `ml`)
 
-Populadas por `notebooks/05_ml_feature_marts.ipynb` a partir de
+Populadas por `notebooks/etapa03_feature_marts_ml.ipynb` a partir de
 `staging.incidentes_silver`. **Divergências de `dw.fct_incidentes`**:
 - `target_risco_sla`/`score_risco_operacional` aqui usam o valor já calculado
   pela Silver, sem o clamp final de `-1`→`0` que `dw.fct_incidentes` aplica —
@@ -269,8 +269,8 @@ Prophet. Colunas: `data_abertura` (PK), `dia_semana_num`, `semana_ano`,
 
 ## Saídas dos modelos de ML (schema `ml`)
 
-Populadas pelos notebooks `forecast_incidentes_revisado.py`,
-`model_clustering_kmeans_Revisado.ipynb` e `model_risk_xgboost_.ipynb`, lendo
+Populadas pelos notebooks `etapa04_forecast_volume_total.py`,
+`etapa09_clusters_kmeans.ipynb` e `etapa10_risco_sla_xgboost.ipynb`, lendo
 das marts acima e gravando no banco `fiap`.
 
 ### `ml.fct_previsao_diaria_total`
@@ -292,8 +292,8 @@ precisa).
 
 ### `ml.fct_previsao_grupo`
 Previsão de volume diário por equipe (`grupo_designado`), D+1 a D+7,
-populada por `notebooks/forecast_equipe.py` (roda depois de
-`forecast_incidentes_revisado.py --fonte sql`, mesma `origem`). Diferente de
+populada por `notebooks/etapa05_forecast_por_equipe.py` (roda depois de
+`etapa04_forecast_volume_total.py --fonte sql`, mesma `origem`). Diferente de
 `fct_previsao_prioridade`/`fct_previsao_categoria`, aqui **nem toda linha é
 split proporcional** — a arquitetura é híbrida conforme a viabilidade de
 série diária de cada equipe (corte e detalhamento completo em
@@ -323,7 +323,7 @@ dobrar ou cair pela metade).
 
 ### `ml.fct_pressao_equipe`
 Pressão Operacional Prevista por equipe (PLAN.md Fase 3, 2026-08-22),
-populada por `notebooks/pressao_equipe.py` a partir de
+populada por `notebooks/etapa06_pressao_por_equipe.py` a partir de
 `ml.fct_previsao_grupo` + média histórica diária da própria equipe
 (calendário completo 2025, zero-fill). **Nunca** é capacidade real,
 headcount ou saturação contratual. Append, idempotente por `origem`
@@ -337,14 +337,14 @@ headcount ou saturação contratual. Append, idempotente por `origem`
 | `yhat_previsto` | numeric | = `ml.fct_previsao_grupo.yhat` |
 | `media_historica_diaria` | numeric | Média diária histórica da própria equipe |
 | `pressao_relativa_pct` | numeric | `((yhat_previsto - media_historica_diaria) / media_historica_diaria) * 100` |
-| `nivel_pressao` | text | `normal` (≤10%) / `atencao` (10-30%) / `critico` (>30%) — limiares fixos em `notebooks/pressao_equipe.py` |
+| `nivel_pressao` | text | `normal` (≤10%) / `atencao` (10-30%) / `critico` (>30%) — limiares fixos em `notebooks/etapa06_pressao_por_equipe.py` |
 | `metodo_origem` | text | `metodo` de `ml.fct_previsao_grupo` (prophet_individual/prophet_semanal/split_proporcional) — para equipes de Grupo C o % é mais ruidoso por construção (média diária < 1) |
 | `modelo_versao` / `data_execucao` | text/timestamp | |
 
 ### `ml.fct_previsao_produto`
 Quebra do forecast total por `produto` via split proporcional histórico
 (PLAN.md Fase 4, 2026-08-22) — mesma técnica de
-`ml.fct_previsao_categoria`, populada por `notebooks/forecast_produto.py`.
+`ml.fct_previsao_categoria`, populada por `notebooks/etapa07_forecast_por_produto.py`.
 **Não é um Prophet por corte.** Colunas: `previsao_produto_sk` (PK),
 `origem`, `h`, `horizonte`, `ds`, `produto`, `share_historico`,
 `yhat_produto`, `modelo_versao`, `data_execucao`. `UNIQUE(origem, ds,

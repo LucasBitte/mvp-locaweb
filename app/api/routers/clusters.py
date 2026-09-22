@@ -2,7 +2,7 @@
 docs/prds/etapa5-api.md §4.5).
 
 **Achado de auditoria (2026-08-22)**: `ml.fct_perfil_cluster.taxa_sla_violado_pct`
-é calculada em `notebooks/model_clustering_kmeans_Revisado.ipynb` a partir de
+é calculada em `notebooks/etapa09_clusters_kmeans.ipynb` a partir de
 `excedeu_tempo_esperado` (duração > threshold da prioridade, ~95% do total),
 **não** do indicador oficial de SLA (`dw.fct_incidentes.kpi_status_int=1`,
 ~0,95% do total — o mesmo usado na tela KPI). São duas definições diferentes

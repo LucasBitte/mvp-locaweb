@@ -1,7 +1,7 @@
 # EDA consolidada — PLAN.md Fase 12
 
 > Consolida em formato Achado/Impacto/Decisão as evidências já levantadas em
-> `notebooks/02_exploratory_data_analysis_silver.ipynb` (EDA completa da
+> `notebooks/exploracao_eda_silver.ipynb` (EDA completa da
 > camada Silver, 6 fases próprias) mais consultas de confirmação rodadas
 > direto contra `dw.fct_incidentes` em 2026-08-22 (41.441 linhas, grão já
 > filtrado — ver `docs/modelo-dimensional.md`). Números desta página são
@@ -17,7 +17,7 @@ existe na tabela bruta `public.incidentes` (122.543 linhas, inclui ruído de
 monitoramento autorresolvido), não no grão de esforço real.
 
 **Impacto**: o corte de regime que o Prophet detecta e usa para restringir o
-treino (`quebras_de_patamar_detectadas`, ver `CLAUDE.md` §10) opera sobre
+treino (`quebras_de_patamar_detectadas`) opera sobre
 `ml.ml_forecast_dataset` — mesma linhagem filtrada de `ml.ml_base_features` —
 não sobre o volume bruto. Confundir os dois levaria a esperar uma quebra de
 patamar que não existe nesse grão.
@@ -37,8 +37,7 @@ grande maioria do volume operacional — e que P1 tem volume estatisticamente
 insignificante para qualquer modelo dedicado.
 
 **Decisão**: manter P1 fora de qualquer forecast/classificação dedicada
-(dado insuficiente); P2+P3 como filtro padrão nas telas, conforme já
-registrado em `CLAUDE.md`.
+(dado insuficiente); P2+P3 como filtro padrão nas telas.
 
 ## 3. Equipe — concentração extrema em Team14/Team11/Team05
 
@@ -128,6 +127,6 @@ do Prophet nas equipes afetadas (Grupo A/B).
 ---
 
 Fonte completa e detalhada da EDA original (6 fases, hipóteses de negócio
-validadas): `notebooks/02_exploratory_data_analysis_silver.ipynb`. Esta
+validadas): `notebooks/exploracao_eda_silver.ipynb`. Esta
 página é o resumo executivo para a Sprint 3 (PLAN.md Fase 16), não substitui
 o notebook.

@@ -1,7 +1,7 @@
 # Sprint 3 — Apresentação final (PLAN.md Fase 16)
 
 > Documento de storytelling do desafio **AIOps Locaweb/FIAP**: consolida em
-> narrativa única o que já está espalhado em `CLAUDE.md`, `PLAN.md` e nos
+> narrativa única o que já está espalhado em `PLAN.md` e nos
 > documentos técnicos de cada etapa (dicionário de dados, modelo
 > dimensional, EDA, métricas de validação, contrato da API, changelogs).
 > Nenhum número aqui é novo ou estimado — cada seção aponta para a fonte
@@ -83,9 +83,9 @@ intenso. Nesta ordem:
    produto (`ml.fct_previsao_produto`), recorrência operacional
    (`dw.fct_recorrencia_operacional`), diagnóstico `k=2..8` do K-Means, EDA
    e métricas de validação consolidadas.
-2. **Dashboard React** (6 telas) portado do design Claude Design, inicialmente
-   com dado estático (mesmos números reais das fases acima, só não
-   dinâmicos ainda).
+2. **Dashboard React** (6 telas) portado do protótipo de design de
+   referência, inicialmente com dado estático (mesmos números reais das
+   fases acima, só não dinâmicos ainda).
 3. **API FastAPI** (`PLAN.md` Fase 14): 6 endpoints servindo dado real,
    contrato completo documentado, 2 achados de auditoria confirmados ao
    vivo contra o banco (detalhados na seção 6 abaixo).
@@ -100,12 +100,12 @@ intenso. Nesta ordem:
 ```
 public.incidentes              (bronze — 122.543 linhas, 2023-2025)
         │
-        ▼  notebook 03
+        ▼  etapa01
 staging.incidentes_silver      (silver — 41.441 linhas, pós-2025)
         │
-        ├──▶ notebook 04 ──▶ dw.*        (star schema, 6 dimensões + fato)
+        ├──▶ etapa02   ──▶ dw.*        (star schema, 6 dimensões + fato)
         │
-        └──▶ notebook 05 ──▶ ml.ml_*     (marts de features, leakage-free)
+        └──▶ etapa03   ──▶ ml.ml_*     (marts de features, leakage-free)
                                    │
                                    ▼
                     forecast total / forecast por equipe / clustering / xgboost
@@ -161,7 +161,7 @@ nunca "por que haverá mais chamados amanhã".
 **Decisão de arquitetura mais visível da Sprint 2**: o forecast por equipe
 não podia ser um split proporcional único, porque 16 equipes têm volumes
 radicalmente diferentes (`Team14` sozinha = 41,3% do volume; 13 equipes
-dividem 17,3%). A investigação (`notebooks/06_forecast_investigacao_equipe.ipynb`)
+dividem 17,3%). A investigação (`notebooks/exploracao_viabilidade_equipe.ipynb`)
 cortou em 3 grupos por viabilidade de série diária — Grupo A (Prophet
 individual, 4 equipes), Grupo B (Prophet diário/semanal conforme
 desempenho, 4 equipes), Grupo C (split proporcional, 8 equipes). Detalhe
@@ -280,7 +280,7 @@ em vez de forçado a caber num mockup bonito:
   coisa diferente do que o nome sugeria (95% vs. 0,6% no mesmo banco), a
   resposta não foi esconder o campo nem inventar um número que combinasse
   com a expectativa — foi renomear, documentar a diferença no próprio
-  payload da API, e registrar o achado em 3 lugares (`CLAUDE.md`, `PLAN.md`
+  payload da API, e registrar o achado em documentação própria (`PLAN.md`
   Anexo A, `docs/prds/etapa5-api.md`) para não se perder.
 - Quando a tela KPI do design original mostrava 4 prioridades com faixas
   de meta que não existem no banco, a tela foi redesenhada para mostrar as

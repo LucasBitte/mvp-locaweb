@@ -2,7 +2,7 @@
 =============================================================================================
  Previsao diaria de volume de incidentes POR EQUIPE (grupo_designado) — D+1 a D+7
  Arquitetura hibrida A/B/C sobre o corte de viabilidade aprovado em
- notebooks/06_forecast_investigacao_equipe.ipynb (media diaria de incidentes/equipe).
+ notebooks/exploracao_viabilidade_equipe.ipynb (media diaria de incidentes/equipe).
 =============================================================================================
 
  Grupo A (media diaria >= 5, Prophet individual): Team14, Team11, Team05, Team09.
@@ -13,11 +13,11 @@
 
  Reaproveita (por import, sem duplicar) Config/prever_prophet/backtest/validar_serie/
  recorte_regime/metricas_gerais/BASELINES/calcular_shares/_md5 de
- notebooks/forecast_incidentes_revisado.py — mesma metodologia/hiperparametros de base
+ notebooks/etapa04_forecast_volume_total.py — mesma metodologia/hiperparametros de base
  do forecast total.
 
  Requisito de sequenciamento: precisa rodar DEPOIS de
- `python notebooks/forecast_incidentes_revisado.py --fonte sql` na mesma origem (Grupo C
+ `python notebooks/etapa04_forecast_volume_total.py --fonte sql` na mesma origem (Grupo C
  le o yhat ja persistido em ml.fct_previsao_diaria_total).
 
  Grava em ml.fct_previsao_grupo (append, idempotente por origem via DELETE+INSERT).
@@ -54,7 +54,7 @@ PROJECT_ROOT = find_project_root(
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from notebooks.forecast_incidentes_revisado import (  # noqa: E402
+from notebooks.etapa04_forecast_volume_total import (  # noqa: E402
     BASELINES,
     Config,
     _md5,
@@ -325,7 +325,7 @@ def carregar_yhat_total(engine, origem) -> pd.DataFrame:
     if df.empty:
         raise RuntimeError(
             f"Nenhuma previsao em ml.fct_previsao_diaria_total para origem={origem}. "
-            "Rode 'python notebooks/forecast_incidentes_revisado.py --fonte sql' primeiro "
+            "Rode 'python notebooks/etapa04_forecast_volume_total.py --fonte sql' primeiro "
             "(mesma origem = mesmo ultimo dia de dado)."
         )
     return df

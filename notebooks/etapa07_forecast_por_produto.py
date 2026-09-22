@@ -7,15 +7,15 @@
  (share_historico de "produto" sobre ml.ml_base_features) aplicado sobre o
  yhat ja persistido em ml.fct_previsao_diaria_total. NAO e um Prophet por
  corte — mesma ressalva de metodologia ja registrada para categoria/
- prioridade em CLAUDE.md.
+ prioridade.
 
  O recorte de regime (`inicio`) usado no share e o mesmo que
- notebooks/forecast_incidentes_revisado.py usaria na mesma execucao (deteccao
+ notebooks/etapa04_forecast_volume_total.py usaria na mesma execucao (deteccao
  automatica de quebra de patamar via validar_serie()), para ficar consistente
  com shares_categoria/shares_prioridade.
 
  Requisito de sequenciamento: precisa rodar DEPOIS de
- `python notebooks/forecast_incidentes_revisado.py --fonte sql` (le a origem
+ `python notebooks/etapa04_forecast_volume_total.py --fonte sql` (le a origem
  mais recente ja persistida em ml.fct_previsao_diaria_total).
 
  Grava em ml.fct_previsao_produto (append, idempotente por origem via
@@ -41,7 +41,7 @@ PROJECT_ROOT = find_project_root(Path(__file__).resolve().parent if "__file__" i
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from notebooks.forecast_incidentes_revisado import (  # noqa: E402
+from notebooks.etapa04_forecast_volume_total import (  # noqa: E402
     _md5,
     calcular_shares,
     carregar_serie,
@@ -71,7 +71,7 @@ def carregar_yhat_total(engine) -> pd.DataFrame:
     if df.empty:
         raise RuntimeError(
             "Nenhuma previsao em ml.fct_previsao_diaria_total. Rode "
-            "'python notebooks/forecast_incidentes_revisado.py --fonte sql' primeiro."
+            "'python notebooks/etapa04_forecast_volume_total.py --fonte sql' primeiro."
         )
     return df
 

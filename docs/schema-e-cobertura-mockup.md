@@ -153,4 +153,4 @@ gap estrutural).
    **probabilidade de atingir a meta anual** não são saídas de nenhum modelo —
    são heurísticas/regras a implementar na camada de API, e devem ser
    apresentadas como tal (não como resultado de ML), consistente com a diretriz
-   já registrada em `CLAUDE.md` (seção 4).
+   já registrada na documentação de contexto do projeto.

@@ -732,7 +732,7 @@ def executar(caminho: str = "ml_forecast_dataset.parquet",
     """
     Entrada para notebook. Equivale a chamar o script pela linha de comando.
 
-        from forecast_incidentes_revisado import executar
+        from etapa04_forecast_volume_total import executar
         executar()  # le de ml.ml_forecast_dataset no banco fiap, grava em data/ml/
 
     Para ler de um parquet local em vez do banco:  executar(fonte="parquet")

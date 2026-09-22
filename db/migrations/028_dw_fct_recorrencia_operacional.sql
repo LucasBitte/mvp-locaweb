@@ -10,7 +10,7 @@
 -- incidente) — uma entidade pode ter poucos incidentes mas aparecer toda
 -- semana (recorrente) ou muitos incidentes concentrados em 1-2 dias (pico
 -- pontual, não recorrente). Regras completas e limiares fixos documentados
--- em notebooks/recorrencia.py.
+-- em notebooks/etapa08_recorrencia_operacional.py.
 --
 -- Grão: 1 linha por (janela_referencia, granularidade, entidade). Recarregada
 -- por completo a cada execução (não é append por origem — é sempre a leitura
