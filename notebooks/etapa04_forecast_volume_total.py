@@ -448,15 +448,15 @@ def acf_residuos(bt: pd.DataFrame, modelo: str, h: int = 1, max_lag: int = 7) ->
 
 # =======================================================================================
 # 5. DADOS DE DIAGNOSTICO
-#    Nao geramos imagem: cada painel do antigo grafico vira um parquet com os numeros
+#    Nao geramos imagem: cada painel do antigo grafico vira um csv com os numeros
 #    que o alimentavam. Quem quiser o grafico plota a partir daqui, e o BI le direto.
 # =======================================================================================
 
 def dados_diagnostico(serie: pd.DataFrame, bt: pd.DataFrame, modelo: str,
                       destino: Path) -> list[Path]:
-    """Grava os insumos dos diagnosticos em parquet e devolve os caminhos escritos.
+    """Grava os insumos dos diagnosticos em csv e devolve os caminhos escritos.
 
-    Real vs previsto e residuos ja estao em backtest_bruto.parquet (colunas ds, h, y,
+    Real vs previsto e residuos ja estao em backtest_bruto.csv (colunas ds, h, y,
     yhat, erro), entao aqui ficam so os agregados que nao dao para derivar sem repetir
     conta: a serie diaria, a ACF dos residuos e o resumo por horizonte. `destino` e a
     pasta do modelo (data/ml/prophet/), entao os arquivos nao precisam de prefixo.
@@ -465,17 +465,17 @@ def dados_diagnostico(serie: pd.DataFrame, bt: pd.DataFrame, modelo: str,
     escritos = []
 
     # Painel 1: serie diaria completa
-    caminho = destino / "serie_diaria.parquet"
-    serie[["ds", "y", "dow"]].to_parquet(caminho, index=False)
+    caminho = destino / "serie_diaria.csv"
+    serie[["ds", "y", "dow"]].to_csv(caminho, index=False)
     escritos.append(caminho)
 
     # Painel "ACF dos residuos D+1": autocorrelacao por lag
     acf = acf_residuos(bt, modelo)
-    caminho = destino / "acf_residuos.parquet"
+    caminho = destino / "acf_residuos.csv"
     (pd.DataFrame({"lag": range(1, len(acf) + 1),
                    "autocorrelacao": acf.values,
                    "modelo": modelo, "horizonte": 1})
-       .to_parquet(caminho, index=False))
+       .to_csv(caminho, index=False))
     escritos.append(caminho)
 
     # Painel "MAE e cobertura por horizonte", mais a distribuicao dos residuos por horizonte
@@ -493,8 +493,8 @@ def dados_diagnostico(serie: pd.DataFrame, bt: pd.DataFrame, modelo: str,
                 .reset_index())
     resumo["nivel_nominal%"] = 100 * NIVEL_INTERVALO
     resumo["modelo"] = modelo
-    caminho = destino / "diagnostico_por_horizonte.parquet"
-    resumo.to_parquet(caminho, index=False)
+    caminho = destino / "diagnostico_por_horizonte.csv"
+    resumo.to_csv(caminho, index=False)
     escritos.append(caminho)
 
     return escritos
@@ -656,7 +656,7 @@ def main(argv: list[str] | None = None):
     bt["periodo"] = np.where(bt.origem <= fim_tuning, "tuning", "avaliacao_final")
     print(f"tuning ate {fim_tuning.date()} | avaliacao final depois disso "
           f"({bt[bt.periodo=='avaliacao_final'].origem.nunique()} origens)")
-    bt.to_parquet(out / "backtest_bruto.parquet")
+    bt.to_csv(out / "backtest_bruto.csv", index=False)
 
     # ---------------- metricas ----------------
     for per in ["tuning", "avaliacao_final"]:
@@ -667,9 +667,9 @@ def main(argv: list[str] | None = None):
         print(metricas_por_horizonte(s).round(0).to_string())
 
     final = bt[bt.periodo == "avaliacao_final"]
-    # Metricas da avaliacao final tambem viram parquet: e o que o BI le, sem reprocessar.
+    # Metricas da avaliacao final tambem viram csv: e o que o BI le, sem reprocessar.
     (metricas_gerais(final).reset_index()
-        .to_parquet(out / "metricas_avaliacao_final.parquet", index=False))
+        .to_csv(out / "metricas_avaliacao_final.csv", index=False))
     print(f"\n{'='*88}\nERRO DO TOTAL DA SEMANA (soma D+1..D+7) — avaliacao final\n{'='*88}")
     print(erro_total_semanal(final).round(1).sort_values("MAE_semana").to_string())
 
@@ -709,7 +709,7 @@ def main(argv: list[str] | None = None):
     num = ["yhat", "yhat_lower", "yhat_upper"]
     print(f.assign(**{c: f[c].round(0) for c in num}).to_string(index=False))
     print(f"total previsto para a semana: {f.yhat.sum():.0f} chamados")
-    f.to_parquet(out / "forecast_d1_d7.parquet", index=False)
+    f.to_csv(out / "forecast_d1_d7.csv", index=False)
 
     if args.fonte == "sql":
         from etl.db import get_engine
@@ -720,8 +720,8 @@ def main(argv: list[str] | None = None):
 
     escritos = dados_diagnostico(serie, final, "prophet_regime", out)
     nomes = ", ".join(c.name for c in escritos)
-    print(f"\nArtefatos em: {out.resolve()}  (backtest_bruto.parquet, "
-          f"metricas_avaliacao_final.parquet, forecast_d1_d7.parquet, {nomes})")
+    print(f"\nArtefatos em: {out.resolve()}  (backtest_bruto.csv, "
+          f"metricas_avaliacao_final.csv, forecast_d1_d7.csv, {nomes})")
 
 
 def executar(caminho: str = "ml_forecast_dataset.parquet",

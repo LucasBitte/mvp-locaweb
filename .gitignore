@@ -32,3 +32,7 @@ mlflow.db
 # Notas internas de contexto (uso local, não versionado)
 CLAUDE.md
 .claude/
+
+# Notas internas de planejamento (uso local, não versionado)
+PLAN.md
+Plan-deploy.md

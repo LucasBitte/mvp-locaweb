@@ -269,6 +269,10 @@ export function computeRecorrencia(entidades: EntidadeRecorrente[]) {
       badgeFg: SUB,
       note: '',
     }
+    // "recorrente_estavel" pode ter delta_pct negativo (presença regular na
+    // janela, mas com queda de volume) — a nota fixa "sem tendência de
+    // queda" contradiria o delta mostrado ao lado nesse caso.
+    const emQueda = e.status_recorrencia === 'recorrente_estavel' && e.delta_pct !== null && e.delta_pct < 0
     return {
       name: e.entidade,
       delta: e.delta_pct === null ? '—' : `${sinal(e.delta_pct)}${fmt1(e.delta_pct)}%`,
@@ -276,7 +280,7 @@ export function computeRecorrencia(entidades: EntidadeRecorrente[]) {
       badge: visual.badge,
       badgeBg: visual.badgeBg,
       badgeFg: visual.badgeFg,
-      note: visual.note,
+      note: emQueda ? 'presença regular na janela, com retração no período' : visual.note,
     }
   })
 }
@@ -576,10 +580,21 @@ const SEVERIDADE_ALERTA: Record<Alerta['tipo'], { dot: string; bg: string; fg: s
   info: { dot: BLUE, bg: 'rgba(30,111,217,.12)', fg: BLUE, label: 'baixa' },
 }
 
+// Alguns valores de regra_origem (ex. cluster_alta_violacao) usam
+// terminologia interna que o projeto evita expor sem qualificação em
+// qualquer outro lugar do dashboard — nunca mostrar o id cru ao usuário.
 export function computeAlertas(alertas: Alerta[]) {
   return alertas.map((a) => {
     const s = SEVERIDADE_ALERTA[a.tipo]
-    return { rule: a.regra_origem, sev: s.label, title: a.titulo, body: a.mensagem, dot: s.dot, badgeBg: s.bg, badgeFg: s.fg }
+    return {
+      rule: REGRA_ORIGEM_LABEL[a.regra_origem] ?? a.regra_origem,
+      sev: s.label,
+      title: a.titulo,
+      body: a.mensagem,
+      dot: s.dot,
+      badgeBg: s.bg,
+      badgeFg: s.fg,
+    }
   })
 }
 
@@ -598,6 +613,6 @@ export function computeRecomendacoes(recs: Recomendacao[]) {
     n: String(r.ordem).padStart(2, '0'),
     title: REGRA_ORIGEM_LABEL[r.regra_origem] ?? r.regra_origem,
     body: r.texto,
-    from: r.regra_origem,
+    from: REGRA_ORIGEM_LABEL[r.regra_origem] ?? r.regra_origem,
   }))
 }
