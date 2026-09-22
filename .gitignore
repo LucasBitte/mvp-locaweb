@@ -28,3 +28,7 @@ mlflow.db
 .vscode/
 .idea/
 .DS_Store
+
+# Notas internas de planejamento (uso local, não versionado)
+PLAN.md
+Plan-deploy.md
